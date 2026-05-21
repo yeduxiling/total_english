@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getDb } from '../db/init.js';
+import { parseLlmResponse } from '../utils/json.js';
 
 const router = Router();
 
@@ -61,18 +62,8 @@ router.post('/', async (req, res) => {
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || '';
 
-    // 5. 解析 JSON 结果
-    let result: { contextualMeaning: string };
-    try {
-      let jsonStr = rawContent;
-      const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
-      }
-      result = JSON.parse(jsonStr);
-    } catch {
-      throw new Error(`Failed to parse reroll response as JSON. Raw response: ${rawContent}`);
-    }
+    // 5. 解析 JSON 结果，使用 parseLlmResponse 容错解析，并加入 'contextualMeaning' 裸纯文本智能兜底保障
+    const result = parseLlmResponse<{ contextualMeaning: string }>(rawContent, 'contextualMeaning');
 
     res.json(result);
   } catch (err: any) {
