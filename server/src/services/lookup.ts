@@ -115,18 +115,82 @@ export async function performLookup(req: LookupRequest): Promise<{
   const data = await response.json();
   const rawContent = data.choices?.[0]?.message?.content || '';
 
+/**
+ * 弹性容错：自动闭合被截断的 JSON 字符串
+ */
+function repairTruncatedJson(jsonStr: string): string {
+  jsonStr = jsonStr.trim();
+  
+  let inString = false;
+  let escape = false;
+  const stack: string[] = [];
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const char = jsonStr[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === '{' || char === '[') {
+        stack.push(char);
+      } else if (char === '}') {
+        if (stack[stack.length - 1] === '{') {
+          stack.pop();
+        }
+      } else if (char === ']') {
+        if (stack[stack.length - 1] === '[') {
+          stack.pop();
+        }
+      }
+    }
+  }
+
+  // 1. 如果在字符串内部被截断，补上引号
+  if (inString) {
+    jsonStr += '"';
+  }
+
+  // 2. 逆序补全所有未闭合的括号
+  while (stack.length > 0) {
+    const last = stack.pop();
+    if (last === '{') {
+      jsonStr += '}';
+    } else if (last === '[') {
+      jsonStr += ']';
+    }
+  }
+
+  return jsonStr;
+}
+
   // 6. 解析 JSON 结果
   let result: LookupResult;
+  let jsonStr = rawContent.trim();
+  const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim();
+  }
+
   try {
-    // 尝试提取 JSON（模型可能返回 markdown 代码块）
-    let jsonStr = rawContent;
-    const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1].trim();
-    }
     result = JSON.parse(jsonStr);
-  } catch {
-    throw new Error(`Failed to parse model response as JSON. Raw response: ${rawContent}`);
+  } catch (initialError) {
+    // 弹性容错：尝试修复截断的 JSON
+    try {
+      const repairedJson = repairTruncatedJson(jsonStr);
+      result = JSON.parse(repairedJson);
+      console.warn('⚠️ Detect truncated JSON from LLM, successfully repaired:', repairedJson);
+    } catch (repairError) {
+      throw new Error(`Failed to parse model response as JSON. Raw response: ${rawContent}`);
+    }
   }
 
   // 7. 保存查询历史
