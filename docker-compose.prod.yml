@@ -27,7 +27,7 @@ services:
       dockerfile: Dockerfile.prod
     ports:
       # 暴露公网端口（您可以根据服务器端口占用情况调整，例如 "8080:80"）
-      - "80:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - server
     restart: unless-stopped
