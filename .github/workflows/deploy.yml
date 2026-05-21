@@ -53,6 +53,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
+            set -e  # 关键：一旦任何命令失败，立即中止并报错，防止虚假绿灯
+            
             # 1. 强制进入服务器项目部署路径
             cd /root/deploy/total_english
             
