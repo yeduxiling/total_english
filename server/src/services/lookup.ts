@@ -193,6 +193,9 @@ function repairTruncatedJson(jsonStr: string): string {
     }
   }
 
+  // 确保解析出的结果 100% 包含当前查询的单词，防止大模型响应缺失 word 字段导致保存字典 400 失败
+  result.word = word;
+
   // 7. 保存查询历史
   db.prepare('INSERT INTO query_history (word, sentence, result_json) VALUES (?, ?, ?)')
     .run(word, sentence, JSON.stringify(result));

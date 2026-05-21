@@ -141,13 +141,17 @@ export default function LookupPage() {
     try {
       const { result, isExistingWord, existingWordId } = response;
       if (isExistingWord && result.matchedMeaningId) {
-        await fetch(`/api/words/meanings/${result.matchedMeaningId}/examples`, {
+        const res = await fetch(`/api/words/meanings/${result.matchedMeaningId}/examples`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sentence: sentence.trim(), tags }),
         });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to save example sentence');
+        }
       } else if (isExistingWord && !result.matchedMeaningId) {
-        await fetch(`/api/words/${existingWordId}/meanings`, {
+        const res = await fetch(`/api/words/${existingWordId}/meanings`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -162,8 +166,12 @@ export default function LookupPage() {
             tags,
           }),
         });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to add meaning to existing word');
+        }
       } else {
-        await fetch('/api/words', {
+        const res = await fetch('/api/words', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -181,6 +189,10 @@ export default function LookupPage() {
             tags,
           }),
         });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to save new word');
+        }
       }
       setSaved(true);
     } catch (err: any) {
