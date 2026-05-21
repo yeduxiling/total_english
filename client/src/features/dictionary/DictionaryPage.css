@@ -1,0 +1,408 @@
+.dictionary-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ========== Toolbar ========== */
+.dict-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.dict-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.dict-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.dict-search {
+  padding-left: 36px !important;
+}
+
+.dict-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.stat-number {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-accent);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* ========== Loading ========== */
+.dict-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.spinner-lg {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: dict-spin 0.6s linear infinite;
+}
+
+@keyframes dict-spin { to { transform: rotate(360deg); } }
+
+/* ========== Empty ========== */
+.dictionary-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 32px;
+  text-align: center;
+  gap: var(--space-4);
+}
+
+.empty-icon { font-size: 4rem; opacity: 0.4; }
+
+.empty-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+}
+
+.empty-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  max-width: 340px;
+}
+
+/* ========== No results ========== */
+.dict-no-results {
+  text-align: center;
+  padding: var(--space-10);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* ========== Card list ========== */
+.dict-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dict-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: visible; /* Changed from hidden to fix dropdown clipping */
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.dict-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-hover);
+}
+
+.dict-card.expanded {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+/* --- Header row (clickable) --- */
+.dict-card-header {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.dict-card-left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dict-word {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+.dict-phonetic {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.dict-pos {
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.dict-card-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.dict-meanings-count {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.dict-tags-preview {
+  display: flex;
+  gap: 4px;
+}
+
+.dict-chip-mini {
+  font-size: 10px;
+  padding: 1px 7px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.dict-expand-icon {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  transition: transform var(--transition-fast);
+  line-height: 1;
+}
+
+.dict-expand-icon.open {
+  transform: rotate(90deg);
+}
+
+/* --- Card body (expanded) --- */
+.dict-card-body {
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+}
+
+/* --- Meaning block --- */
+.dict-meaning-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-accent);
+}
+
+.dict-meaning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dict-meaning-num {
+  font-size: 11px;
+  font-weight: var(--font-bold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dict-stars {
+  display: flex;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.dict-stars .star-on { color: #f59e0b; }
+.dict-stars .star-off { color: #e2e8f0; }
+
+.dict-meaning-text {
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  font-weight: var(--font-medium);
+}
+
+/* --- Chips --- */
+.dict-chips-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dict-chips-label {
+  font-size: 11px;
+  font-weight: var(--font-bold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dict-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dict-chip-synonym {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #e0e7ff;
+}
+
+.dict-chip-collocation {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fef3c7;
+}
+
+/* --- Examples --- */
+.dict-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dict-example {
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--color-text-secondary);
+  padding-left: 12px;
+  border-left: 2px solid var(--color-border);
+  line-height: 1.7;
+}
+
+.dict-meaning-tags {
+  margin-top: var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* --- Footer --- */
+.dict-card-footer {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end; /* changed because tags moved to meaning */
+  align-items: center;
+}
+
+.dict-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dict-tag-add-container {
+  width: 150px;
+}
+
+.dict-chip-tag {
+  background: var(--color-accent-subtle, #eef2ff);
+  color: var(--color-accent, #4f46e5);
+  font-size: 12px;
+  font-weight: var(--font-medium);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.dict-chip-tag:hover {
+  background: var(--color-accent, #4f46e5);
+  color: #ffffff;
+  border-color: var(--color-accent, #4f46e5);
+}
+
+.dict-chip-remove {
+  background: none;
+  border: none;
+  color: currentColor;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: opacity 0.2s ease;
+}
+
+.dict-chip-remove:hover {
+  opacity: 1;
+}
+
+.dict-delete-btn {
+  color: var(--color-error);
+}
+
+.dict-delete {
+  font-size: var(--text-xs);
+  color: var(--color-error) !important;
+  padding: 4px 10px;
+}
+
+.dict-delete:hover {
+  background: rgba(239, 68, 68, 0.06);
+  border-radius: var(--radius-sm);
+}

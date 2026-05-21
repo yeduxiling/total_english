@@ -1,0 +1,50 @@
+# Total English - 开发环境
+# 使用方式: docker compose up --build
+
+services:
+  # 后端服务 (Express + SQLite)
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      # 源码热重载
+      - ./server/src:/app/src
+      - ./server/package.json:/app/package.json
+      # SQLite 数据持久化
+      - server-data:/app/data
+      # 排除 node_modules（使用容器内的）
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+    restart: unless-stopped
+
+  # 前端服务 (Vite + React)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      # 源码热重载
+      - ./client/src:/app/src
+      - ./client/index.html:/app/index.html
+      - ./client/package.json:/app/package.json
+      - ./client/vite.config.ts:/app/vite.config.ts
+      - ./client/tsconfig.json:/app/tsconfig.json
+      - ./client/tsconfig.app.json:/app/tsconfig.app.json
+      # 排除 node_modules
+    environment:
+      - NODE_ENV=development
+      # Vite 需要这个才能在容器中被外部访问
+      - VITE_API_BASE_URL=http://localhost:3001
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  server-data:
+    driver: local

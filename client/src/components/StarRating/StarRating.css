@@ -1,0 +1,8 @@
+.star-rating {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.star-rating--sm { font-size: var(--text-sm); }
+.star-rating--md { font-size: var(--text-lg); }
+.star-rating--lg { font-size: var(--text-2xl); }

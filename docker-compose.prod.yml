@@ -1,0 +1,37 @@
+# ==========================================================
+# Total English - 生产环境 Docker Compose
+# 启动指令: docker compose -f docker-compose.prod.yml up --build -d
+# ==========================================================
+
+services:
+  # 1. 后端服务 (Node.js API + SQLite)
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.prod
+    # 生产安全：不需要在公网暴露 3001 端口，仅在 Docker 局域网内供 Nginx 容器反代访问
+    expose:
+      - "3001"
+    volumes:
+      # 持久化挂载 SQLite 数据，防止容器重建或重启时单词字典和历史数据丢失
+      - server-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    restart: unless-stopped
+
+  # 2. 前端服务 (Nginx)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.prod
+    ports:
+      # 暴露公网端口（您可以根据服务器端口占用情况调整，例如 "8080:80"）
+      - "80:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  server-data:
+    driver: local

@@ -1,0 +1,43 @@
+# ==========================================
+# 阶段 1: 依赖安装与 TypeScript 编译
+# ==========================================
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# 安装 better-sqlite3 编译所需的依赖
+RUN apk add --no-cache python3 make g++
+
+# 复制 package 文件并安装所有依赖（包括 devDependencies 用于编译）
+COPY package*.json ./
+RUN npm ci
+
+# 复制源码并执行构建
+COPY . .
+RUN npm run build
+
+# ==========================================
+# 阶段 2: 生产运行环境
+# ==========================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 生产环境运行也需要 better-sqlite3 相关的运行库，这里为了安全和兼容直接在生产镜像中重新 npm install --production
+RUN apk add --no-cache python3 make g++
+
+COPY package*.json ./
+# 只安装生产依赖
+RUN npm ci --only=production
+
+# 从 builder 复制编译后的 JS 文件
+COPY --from=builder /app/dist ./dist
+
+# 创建持久化数据目录
+RUN mkdir -p /app/data
+
+EXPOSE 3001
+ENV NODE_ENV=production
+ENV PORT=3001
+
+CMD ["npm", "run", "start"]

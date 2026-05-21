@@ -1,0 +1,39 @@
+# 依赖包 (Dependencies)
+node_modules/
+**/node_modules/
+.npm-cache/
+
+# 编译打包输出 (Production Builds)
+dist/
+**/dist/
+dist-ssr/
+*.local
+
+# 系统临时文件 (OS generated files)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 环境变量及敏感信息 (Environment secrets)
+.env
+.env.local
+.env.*.local
+
+# 本地数据库与开发数据 (Local SQLite Data)
+server/data/
+*.db
+*.db-journal
+*.sqlite3
+
+# 编辑器配置 (Editor configurations)
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
