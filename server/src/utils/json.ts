@@ -88,6 +88,21 @@ export function parseLlmResponse<T>(rawContent: string, fallbackKey?: keyof T): 
       const repaired = repairTruncatedJson(jsonStr);
       return JSON.parse(repaired) as T;
     } catch (repairError) {
+      // 3.5 极高阶容错：最外层逗号回退裁剪法。
+      // 专门应对截断发生在 key 名字中间、或冒号中间等“补齐括号依然无效”的极刁钻场景。
+      try {
+        const lastCommaIdx = findLastOuterCommaIndex(jsonStr);
+        if (lastCommaIdx !== -1) {
+          const truncated = jsonStr.substring(0, lastCommaIdx);
+          const repairedAgain = repairTruncatedJson(truncated);
+          const parsed = JSON.parse(repairedAgain) as T;
+          console.warn('✨ [LLM Parser Self-Healing] Successfully recovered from a highly problematic key/colon truncation using outer comma cut.');
+          return parsed;
+        }
+      } catch (commaCutError) {
+        // 自愈失败，继续向下走常规兜底
+      }
+
       // 4. 最终兜底方案：如果指定了 fallbackKey 且看起来确实不像是一个 JSON 块，
       // 我们直接将这行纯文本内容以指定字段返回，防止直接报错崩溃。
       if (fallbackKey && typeof fallbackKey === 'string') {
@@ -101,4 +116,47 @@ export function parseLlmResponse<T>(rawContent: string, fallbackKey?: keyof T): 
       throw new Error(`Failed to parse LLM response. Raw content: ${rawContent}`);
     }
   }
+}
+
+/**
+ * 寻找最外层（嵌套深度为1）的最后一个逗号索引，辅助截断裁剪
+ */
+function findLastOuterCommaIndex(jsonStr: string): number {
+  let inString = false;
+  let escape = false;
+  const stack: string[] = [];
+  let lastCommaIdx = -1;
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const char = jsonStr[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === '{' || char === '[') {
+        stack.push(char);
+      } else if (char === '}') {
+        if (stack[stack.length - 1] === '{') {
+          stack.pop();
+        }
+      } else if (char === ']') {
+        if (stack[stack.length - 1] === '[') {
+          stack.pop();
+        }
+      } else if (char === ',' && stack.length === 1 && stack[0] === '{') {
+        // 当深度为 1 且处于外层大括号时，记录逗号位置
+        lastCommaIdx = i;
+      }
+    }
+  }
+  return lastCommaIdx;
 }
