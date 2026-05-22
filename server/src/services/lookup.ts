@@ -1,5 +1,6 @@
 import { getDb } from '../db/init.js';
 import { parseLlmResponse } from '../utils/json.js';
+import { callLlmWithRetry } from '../utils/llm.js';
 
 interface LookupRequest {
   word: string;
@@ -87,7 +88,7 @@ export async function performLookup(req: LookupRequest): Promise<{
     throw new Error('No active model configured. Please go to Settings to add one.');
   }
 
-  // 5. 调用大模型
+  // 5. 调用大模型 (使用高可用自动重试机制)
   const apiUrl = `${modelConfig.base_url.replace(/\/$/, '')}/chat/completions`;
   const requestBody = {
     model: modelConfig.model_id,
@@ -99,22 +100,11 @@ export async function performLookup(req: LookupRequest): Promise<{
     max_tokens: 1000,
   };
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${modelConfig.api_key}`,
-    },
-    body: JSON.stringify(requestBody),
+  const rawContent = await callLlmWithRetry({
+    apiUrl,
+    apiKey: modelConfig.api_key,
+    requestBody,
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Model API error (${response.status}): ${errorText}`);
-  }
-
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content || '';
 
   // 6. 解析 JSON 结果
   const result = parseLlmResponse<LookupResult>(rawContent);

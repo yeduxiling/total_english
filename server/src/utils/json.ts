@@ -63,6 +63,9 @@ export function repairTruncatedJson(jsonStr: string): string {
  * 4. 对于 Reroll 等场景，如果都失败了，且确实不是以 { 开头，将其视为纯文本直接填充该字段返回
  */
 export function parseLlmResponse<T>(rawContent: string, fallbackKey?: keyof T): T {
+  if (!rawContent || rawContent.trim() === '') {
+    throw new Error('大模型响应内容为空。这通常是由于中转 API 节点抖动、请求过载、API 额度不足或被安全策略拦截所致。请尝试重新点击“Look Up”或前往“Settings”检查模型配置。');
+  }
   let jsonStr = rawContent.trim();
 
   // 1. 定位并剥离 Markdown 包装，去除前导多余文本与后导标记 (无需成对出现)
