@@ -9,13 +9,77 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-6);
+  gap: var(--space-4);
+  flex-wrap: wrap;
 }
 
 .dict-search-wrap {
   position: relative;
   flex: 1;
-  max-width: 400px;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.dict-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* 分段选择器 (Segmented Control) */
+.dict-filter-group {
+  display: inline-flex;
+  background-color: var(--color-bg-tertiary);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.filter-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: calc(var(--radius-md) - 3px);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filter-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.filter-btn.active {
+  background-color: var(--color-bg-card);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 排序下拉选择 */
+.dict-sort-select {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+  height: 34px;
+}
+
+.dict-sort-select:hover {
+  border-color: var(--color-border-hover);
+}
+
+.dict-sort-select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-glow);
 }
 
 .dict-search-icon {

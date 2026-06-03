@@ -5,6 +5,7 @@ const DEFAULT_SYSTEM_PROMPT = `You are a professional English linguist and lexic
 
 You MUST output strictly in the following JSON format with no extra text:
 {
+  "word": "dictionary base form of the word/phrase",
   "phonetic": "IPA phonetic transcription",
   "partOfSpeech": "part of speech",
   "contextualMeaning": "the general dictionary definition that fits this context (in English). CRITICAL: Do NOT include specific names, subjects, or objects from the example sentence. Keep it general (e.g., use 'someone' or 'something').",
@@ -14,6 +15,11 @@ You MUST output strictly in the following JSON format with no extra text:
   "frequencyNote": "brief frequency note, keep under 10 words",
   "matchedMeaningId": null
 }
+
+CRITICAL RULES FOR "word" FIELD:
+1. Identify and return the dictionary base form (lemma) of the analyzed word/phrase, removing inflections like tense (past, present participle, etc.), plural suffixes, or comparative/superlative suffixes (e.g., return "go" for "went"/"going", "example" for "examples", "large" for "larger").
+2. Convert the word/phrase to lowercase. However, keep proper nouns (like "London", "Shakespeare") capitalized as appropriate. If a word is capitalized ONLY because it is at the beginning of the sentence, convert it to lowercase.
+3. EXCEPTION: If a word ending in "-ed" acts as an adjective in this context (e.g., "excited", "sophisticated", "limited"), do NOT restore it to its root verb form. Keep the adjective form.
 
 Frequency rating scale (1-5 stars):
 5: Core high-frequency word, essential for daily use
@@ -95,5 +101,13 @@ export function seedDefaultPrompts(db: Database.Database): void {
     );
 
     console.log('✅ Default prompt templates inserted/updated');
+  } else {
+    // 已经有默认模板了，更新其 system_prompt 确保包含最新的 word 提取指示
+    db.prepare(`
+      UPDATE prompt_templates
+      SET system_prompt = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE name IN ('语境查词-新词', '语境查词-已有词匹配')
+    `).run(DEFAULT_SYSTEM_PROMPT);
+    console.log('🔄 Prompt templates updated to use lemma extraction');
   }
 }

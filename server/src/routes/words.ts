@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../db/init.js';
 import { v4 as uuidv4 } from 'uuid';
+import { generateAudio } from '../services/tts.js';
 
 const router = Router();
 
@@ -170,6 +171,11 @@ router.post('/', (req, res) => {
   try {
     const wordId = transaction();
     res.status(201).json({ id: wordId, message: '词条创建成功' });
+
+    // 后台异步生成 TTS 音频（不阻塞响应）
+    generateAudio(Number(wordId), word).catch(err => {
+      console.warn(`⚠️ TTS 音频生成失败 (word=${word}):`, err.message);
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

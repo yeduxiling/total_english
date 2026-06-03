@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import TagAutocomplete from '../../components/TagAutocomplete.js';
+import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import './LookupPage.css';
 
 interface LookupResult {
@@ -272,7 +273,10 @@ export default function LookupPage() {
           {/* Word hero section */}
           <div className="result-hero">
             <div className="result-hero-left">
-              <h2 className="result-word font-english">{r.word}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 className="result-word font-english">{r.word}</h2>
+                <SpeakButton text={r.word} size="md" />
+              </div>
               <div className="result-meta">
                 <span className="result-phonetic font-mono">{r.phonetic}</span>
                 <span className="result-pos-badge">{r.partOfSpeech}</span>
@@ -350,7 +354,10 @@ export default function LookupPage() {
             {/* Example sentence */}
             <div className="result-block">
               <div className="block-label">Example Sentence</div>
-              <p className="block-example font-english">"{sentence}"</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <p className="block-example font-english" style={{ margin: 0 }}>"{sentence}"</p>
+                <SpeakButton text={sentence} size="sm" />
+              </div>
             </div>
           </div>
 

@@ -7,6 +7,7 @@ const router = Router();
 
 interface ChunkRow {
   meaning_id: string;
+  word_id: number;
   word: string;
   phonetic: string;
   part_of_speech: string;
@@ -77,6 +78,7 @@ router.get('/next', (_req, res) => {
   const chunks = db.prepare(`
     SELECT
       m.id AS meaning_id,
+      w.id AS word_id,
       w.word,
       w.phonetic,
       w.part_of_speech,
@@ -119,6 +121,7 @@ router.get('/next', (_req, res) => {
 
   res.json({
     meaningId: selected.meaning_id,
+    wordId: selected.word_id,
     word: selected.word,
     phonetic: selected.phonetic || '',
     partOfSpeech: selected.part_of_speech || '',

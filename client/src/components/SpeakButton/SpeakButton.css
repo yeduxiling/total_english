@@ -1,0 +1,120 @@
+.speak-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background-color: var(--color-accent-subtle, rgba(99, 102, 241, 0.06));
+  color: var(--color-text-secondary, #64748b);
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  padding: 0;
+  transition: all var(--transition-fast, 150ms ease);
+  outline: none;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* 尺寸配置 */
+.speak-btn-md {
+  width: 36px;
+  height: 36px;
+}
+
+.speak-btn-sm {
+  width: 28px;
+  height: 28px;
+}
+
+/* 悬停与激活状态 */
+.speak-btn:hover {
+  color: var(--color-accent, #6366f1);
+  background-color: var(--color-accent-glow, rgba(99, 102, 241, 0.1));
+  transform: scale(1.06);
+}
+
+.speak-btn:active {
+  transform: scale(0.96);
+}
+
+/* 播放中状态 */
+.speak-status-playing {
+  color: var(--color-accent, #6366f1);
+  background-color: var(--color-accent-glow, rgba(99, 102, 241, 0.15));
+  box-shadow: 0 0 12px var(--color-accent-glow, rgba(99, 102, 241, 0.2));
+}
+
+/* 按钮图标 */
+.speak-btn-icon {
+  width: 55%;
+  height: 55%;
+  transition: transform var(--transition-fast, 150ms ease);
+}
+
+.speak-btn:hover .speak-btn-icon {
+  transform: scale(1.05);
+}
+
+/* 加载状态的旋转动画 */
+.speak-btn-spinner {
+  width: 50%;
+  height: 50%;
+  border: 2px solid var(--color-border, #e2e8f0);
+  border-top-color: var(--color-accent, #6366f1);
+  border-radius: 50%;
+  animation: speak-spin 0.8s linear infinite;
+}
+
+@keyframes speak-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 播放状态的音波跳动动画 */
+.speak-btn-wave {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2.5px;
+  height: 42%;
+  width: 50%;
+}
+
+.speak-wave-bar {
+  width: 2px;
+  background-color: var(--color-accent, #6366f1);
+  border-radius: 1px;
+  animation: speak-wave-bounce 1s ease-in-out infinite alternate;
+}
+
+.bar-1 {
+  height: 30%;
+  animation-delay: 0.1s;
+}
+
+.bar-2 {
+  height: 80%;
+  animation-delay: 0.3s;
+}
+
+.bar-3 {
+  height: 50%;
+  animation-delay: 0.2s;
+}
+
+@keyframes speak-wave-bounce {
+  0% {
+    height: 20%;
+  }
+  100% {
+    height: 100%;
+  }
+}
+
+/* 暗色模式微调 */
+.dark-theme .speak-btn {
+  background-color: rgba(99, 102, 241, 0.1);
+}
+.dark-theme .speak-btn:hover {
+  background-color: rgba(99, 102, 241, 0.2);
+}

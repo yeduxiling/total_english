@@ -109,8 +109,27 @@ export async function performLookup(req: LookupRequest): Promise<{
   // 6. 解析 JSON 结果
   const result = parseLlmResponse<LookupResult>(rawContent);
 
-  // 确保解析出的结果 100% 包含当前查询的单词，防止大模型响应缺失 word 字段导致保存字典 400 失败
-  result.word = word;
+  // 清洗大模型返回的单词原型，如不存在则使用原始输入词
+  let baseWord = result.word ? result.word.trim() : word.trim();
+
+  // 如果首字母是大写且不是全大写缩写，将首字母转为小写
+  if (baseWord && !/^[A-Z]{2,}/.test(baseWord)) {
+    baseWord = baseWord.charAt(0).toLowerCase() + baseWord.slice(1);
+  }
+  result.word = baseWord;
+
+  // 【第二阶段自愈查重】：如果先前输入词没匹配上已有词，但大模型提取出的原型在库中确实存在，
+  // 我们将这次查询修正为对该已有原型词条的“追加释义”操作，保障数据库中单词唯一性。
+  if (!isExistingWord) {
+    const existingWordByBase = db.prepare('SELECT * FROM words WHERE word = ? COLLATE NOCASE').get(baseWord) as any;
+    if (existingWordByBase) {
+      isExistingWord = true;
+      existingWordId = existingWordByBase.id;
+      existingMeanings = db.prepare('SELECT id, contextual_meaning FROM meanings WHERE word_id = ?').all(existingWordByBase.id) as ExistingMeaning[];
+      // 保持 matchedMeaningId 为 null，表示在此原型词条下追加新含义
+      result.matchedMeaningId = null;
+    }
+  }
 
   // 7. 保存查询历史
   db.prepare('INSERT INTO query_history (word, sentence, result_json) VALUES (?, ?, ?)')

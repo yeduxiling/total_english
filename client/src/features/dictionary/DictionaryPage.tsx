@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import TagAutocomplete from '../../components/TagAutocomplete.js';
+import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import './DictionaryPage.css';
 
 interface Example {
@@ -197,7 +198,10 @@ function MeaningBlock({
         <div className="dict-examples">
           <span className="dict-chips-label">Examples</span>
           {meaning.examples.map(ex => (
-            <p key={ex.id} className="dict-example font-english">"{ex.sentence}"</p>
+            <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <p className="dict-example font-english" style={{ margin: 0 }}>"{ex.sentence}"</p>
+              <SpeakButton text={ex.sentence} size="sm" />
+            </div>
           ))}
         </div>
       )}
@@ -227,6 +231,8 @@ export default function DictionaryPage() {
   const [loading, setLoading] = useState(true);
   const [expandedWord, setExpandedWord] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'time-desc' | 'time-asc' | 'alpha-asc' | 'alpha-desc'>('time-desc');
+  const [filterType, setFilterType] = useState<'all' | 'word' | 'phrase'>('all');
 
   useEffect(() => {
     fetchWords();
@@ -313,10 +319,38 @@ export default function DictionaryPage() {
     }
   };
 
-  const filtered = words.filter(w =>
-    w.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    w.meanings.some(m => m.contextual_meaning.includes(searchQuery))
-  );
+  const filtered = words
+    .filter(w => {
+      // 1. 文本搜索过滤（大小写不敏感）
+      const matchesSearch =
+        w.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        w.meanings.some(m => m.contextual_meaning.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      if (!matchesSearch) return false;
+
+      // 2. 单词/词组分类过滤
+      const isPhrase = w.word.trim().includes(' ');
+      if (filterType === 'word') return !isPhrase;
+      if (filterType === 'phrase') return isPhrase;
+      
+      return true;
+    })
+    .sort((a, b) => {
+      // 3. 排序逻辑
+      if (sortBy === 'time-desc') {
+        return b.id - a.id; // 最新添加在前
+      }
+      if (sortBy === 'time-asc') {
+        return a.id - b.id; // 最早添加在前
+      }
+      if (sortBy === 'alpha-asc') {
+        return a.word.localeCompare(b.word); // A-Z
+      }
+      if (sortBy === 'alpha-desc') {
+        return b.word.localeCompare(a.word); // Z-A
+      }
+      return 0;
+    });
 
   return (
     <div className="dictionary-page animate-in">
@@ -340,9 +374,48 @@ export default function DictionaryPage() {
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
+
+          <div className="dict-filters">
+            {/* 只看单词/词组的分段选择器 */}
+            <div className="dict-filter-group">
+              <button
+                className={`filter-btn ${filterType === 'all' ? 'active' : ''}`}
+                onClick={() => setFilterType('all')}
+              >
+                All
+              </button>
+              <button
+                className={`filter-btn ${filterType === 'word' ? 'active' : ''}`}
+                onClick={() => setFilterType('word')}
+              >
+                Words
+              </button>
+              <button
+                className={`filter-btn ${filterType === 'phrase' ? 'active' : ''}`}
+                onClick={() => setFilterType('phrase')}
+              >
+                Phrases
+              </button>
+            </div>
+
+            {/* 排序下拉选择 */}
+            <select
+              className="dict-sort-select"
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+            >
+              <option value="time-desc">📅 Latest Added</option>
+              <option value="time-asc">⏳ Oldest Added</option>
+              <option value="alpha-asc">🔤 Alphabetical (A-Z)</option>
+              <option value="alpha-desc">🔤 Alphabetical (Z-A)</option>
+            </select>
+          </div>
+
           <div className="dict-stats">
-            <span className="stat-number">{words.length}</span>
-            <span className="stat-label">{words.length === 1 ? 'word' : 'words'} saved</span>
+            <span className="stat-number">{filtered.length}</span>
+            <span className="stat-label">
+              {filtered.length === 1 ? 'result' : 'results'}
+            </span>
           </div>
         </div>
       )}
@@ -384,8 +457,9 @@ export default function DictionaryPage() {
                   className="dict-card-header"
                   onClick={() => setExpandedWord(isExpanded ? null : entry.id)}
                 >
-                  <div className="dict-card-left">
+                  <div className="dict-card-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="dict-word font-english">{entry.word}</span>
+                    <SpeakButton wordId={entry.id} size="sm" />
                     <span className="dict-phonetic font-mono">{entry.phonetic}</span>
                     <span className="dict-pos">{entry.part_of_speech}</span>
                   </div>

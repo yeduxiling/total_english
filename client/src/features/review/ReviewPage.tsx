@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
+import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import './ReviewPage.css';
 
 interface ReviewChunk {
   meaningId: string;
+  wordId: number;
   word: string;
   phonetic: string;
   partOfSpeech: string;
@@ -202,15 +204,17 @@ export default function ReviewPage() {
         {chunk && !transitioning && (
           <div className="review-card" key={chunk.meaningId + chunk.sentence}>
             {/* 例句 */}
-            <div className="review-card-sentence">
-              <p className="review-sentence-text">
+            <div className="review-card-sentence" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              <p className="review-sentence-text" style={{ margin: 0 }}>
                 {highlightChunk(chunk.sentence, chunk.word)}
               </p>
+              <SpeakButton text={chunk.sentence} size="sm" />
             </div>
 
             {/* 单词信息 */}
-            <div className="review-card-word-info">
+            <div className="review-card-word-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span className="review-word-label">{chunk.word}</span>
+              <SpeakButton wordId={chunk.wordId} size="sm" />
               {chunk.phonetic && (
                 <span className="review-word-phonetic">{chunk.phonetic}</span>
               )}
