@@ -5,6 +5,7 @@ import './Layout.css';
 const navItems = [
   { path: '/', icon: '🔍', label: 'Lookup' },
   { path: '/dictionary', icon: '📖', label: 'Dictionary' },
+  { path: '/review', icon: '🧠', label: 'Review' },
   { path: '/settings', icon: '⚙️', label: 'Settings' },
 ];
 

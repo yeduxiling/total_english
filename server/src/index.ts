@@ -7,6 +7,7 @@ import promptsRouter from './routes/prompts.js';
 import lookupRouter from './routes/llm.js';
 import rerollRouter from './routes/reroll.js';
 import tagsRouter from './routes/tags.js';
+import reviewRouter from './routes/review.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,6 +26,7 @@ app.use('/api/prompts', promptsRouter);
 app.use('/api/lookup', lookupRouter);
 app.use('/api/reroll', rerollRouter);
 app.use('/api/tags', tagsRouter);
+app.use('/api/review', reviewRouter);
 
 // 健康检查
 app.get('/api/health', (_req, res) => {

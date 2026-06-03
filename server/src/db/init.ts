@@ -128,6 +128,16 @@ export function initDatabase(): void {
       FOREIGN KEY (meaning_id) REFERENCES meanings(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_variants_meaning ON meaning_variants(meaning_id);
+
+    -- 复习记录表
+    CREATE TABLE IF NOT EXISTS review_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      meaning_id TEXT NOT NULL,
+      action TEXT NOT NULL CHECK(action IN ('understand', 'confused')),
+      reviewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (meaning_id) REFERENCES meanings(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_review_logs_meaning ON review_logs(meaning_id);
   `);
 
   // 插入种子数据
