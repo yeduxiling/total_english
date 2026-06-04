@@ -234,10 +234,6 @@ export default function DictionaryPage() {
   const [sortBy, setSortBy] = useState<'time-desc' | 'time-asc' | 'alpha-asc' | 'alpha-desc'>('time-desc');
   const [filterType, setFilterType] = useState<'all' | 'word' | 'phrase'>('all');
 
-  useEffect(() => {
-    fetchWords();
-  }, []);
-
   const fetchWords = async () => {
     try {
       const res = await fetch('/api/words');
@@ -246,6 +242,13 @@ export default function DictionaryPage() {
     } catch { /* ignore */ }
     finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchWords();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this word from your dictionary?')) return;
@@ -402,7 +405,7 @@ export default function DictionaryPage() {
             <select
               className="dict-sort-select"
               value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              onChange={e => setSortBy(e.target.value as typeof sortBy)}
             >
               <option value="time-desc">📅 Latest Added</option>
               <option value="time-asc">⏳ Oldest Added</option>

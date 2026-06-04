@@ -61,8 +61,8 @@ export default function LookupPage() {
       setResponse(data);
       setMeaningVariants([data.result.contextualMeaning]);
       setCurrentVariantIndex(0);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -109,8 +109,8 @@ export default function LookupPage() {
         }
       });
       
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setIsRerolling(false);
     }
@@ -196,8 +196,8 @@ export default function LookupPage() {
         }
       }
       setSaved(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setSaving(false);
     }

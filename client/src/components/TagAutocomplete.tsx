@@ -44,15 +44,9 @@ export default function TagAutocomplete({ onAddTag, existingTags = [], placehold
 
   // 过滤推荐标签逻辑
   const availableTags = allTags.filter(t => !existingTags.includes(t.name));
-  let suggestedTags: TagData[] = [];
-
-  if (!input.trim()) {
-    // 未输入内容时，展示 top 5
-    suggestedTags = availableTags.slice(0, 5);
-  } else {
-    // 有输入时模糊匹配（包含该子串）
-    suggestedTags = availableTags.filter(t => t.name.toLowerCase().includes(input.toLowerCase()));
-  }
+  const suggestedTags: TagData[] = !input.trim()
+    ? availableTags.slice(0, 5)
+    : availableTags.filter(t => t.name.toLowerCase().includes(input.toLowerCase()));
 
   const handleAdd = (tagName: string) => {
     const trimmed = tagName.trim();

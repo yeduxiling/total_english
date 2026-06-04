@@ -12,8 +12,8 @@ function TagSettings() {
   const [loading, setLoading] = useState(true);
   const [newTag, setNewTag] = useState('');
 
-  const loadTags = () => {
-    setLoading(true);
+  const loadTags = (showLoading = true) => {
+    if (showLoading) setLoading(true);
     fetch('/api/tags')
       .then(res => res.json())
       .then(data => {
@@ -27,7 +27,10 @@ function TagSettings() {
   };
 
   useEffect(() => {
-    loadTags();
+    const timer = setTimeout(() => {
+      loadTags(false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleAdd = async () => {
@@ -94,6 +97,15 @@ function TagSettings() {
   );
 }
 
+interface LlmConfig {
+  id: string;
+  name: string;
+  model_id: string;
+  is_active: number;
+  base_url: string;
+  api_key?: string;
+}
+
 interface PromptTemplate {
   id: string;
   name: string;
@@ -110,7 +122,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'llm' | 'prompts' | 'tags'>('llm');
 
   // LLM Config State
-  const [llmConfigs, setLlmConfigs] = useState<any[]>([]);
+  const [llmConfigs, setLlmConfigs] = useState<LlmConfig[]>([]);
   const [isEditingConfig, setIsEditingConfig] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -192,7 +204,7 @@ export default function SettingsPage() {
     }
   };
 
-  const openEditLLM = (config?: any) => {
+  const openEditLLM = (config?: LlmConfig) => {
     setMessage({ text: '', type: '' });
     if (config) {
       setEditingId(config.id);

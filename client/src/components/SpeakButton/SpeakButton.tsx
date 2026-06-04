@@ -33,14 +33,13 @@ export default function SpeakButton({ wordId, text, size = 'md' }: SpeakButtonPr
     }
 
     // 确定请求地址
-    let audioUrl = '';
-    if (wordId !== undefined) {
-      audioUrl = `/api/tts/${wordId}`;
-    } else if (text) {
-      audioUrl = `/api/tts/preview?text=${encodeURIComponent(text)}`;
-    } else {
-      return;
-    }
+    const audioUrl = wordId !== undefined
+      ? `/api/tts/${wordId}`
+      : text
+        ? `/api/tts/preview?text=${encodeURIComponent(text)}`
+        : '';
+
+    if (!audioUrl) return;
 
     setStatus('loading');
 

@@ -54,12 +54,14 @@ export default function ReviewPage() {
   const [totalChunks, setTotalChunks] = useState(0);
 
   // 获取下一个 chunk
-  const fetchNext = useCallback(async () => {
-    setTransitioning(true);
-    setShowDefinition(false);
+  const fetchNext = useCallback(async (isInitial = false) => {
+    if (!isInitial) {
+      setTransitioning(true);
+      setShowDefinition(false);
 
-    // 短暂延迟让退场动画生效
-    await new Promise(r => setTimeout(r, 150));
+      // 短暂延迟让退场动画生效
+      await new Promise(r => setTimeout(r, 150));
+    }
 
     try {
       const res = await fetch('/api/review/next');
@@ -78,12 +80,17 @@ export default function ReviewPage() {
       console.error('获取复习内容失败:', err);
     } finally {
       setLoading(false);
-      setTransitioning(false);
+      if (!isInitial) {
+        setTransitioning(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    fetchNext();
+    const timer = setTimeout(() => {
+      fetchNext(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchNext]);
 
   // 记录操作
@@ -233,7 +240,7 @@ export default function ReviewPage() {
                   onClick={handleConfused}
                   id="review-btn-confused"
                 >
-                  <span className="review-btn-icon">😕</span>
+                  <span className="review-btn-icon">🤷</span>
                   Confused
                 </button>
                 <button
@@ -241,7 +248,7 @@ export default function ReviewPage() {
                   onClick={handleUnderstand}
                   id="review-btn-understand"
                 >
-                  <span className="review-btn-icon">✓</span>
+                  <span className="review-btn-icon">🤩</span>
                   Understand
                 </button>
               </div>
