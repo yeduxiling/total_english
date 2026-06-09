@@ -184,6 +184,63 @@
   margin: 0;
   word-break: break-word;
   font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  white-space: pre-wrap;
+}
+
+/* 原位编辑样式 */
+.edit-sentence-textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2-5) var(--space-3);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.edit-sentence-textarea:focus {
+  border-color: var(--color-accent);
+  background: var(--color-bg-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+}
+
+.edit-card-btn,
+.save-edit-btn,
+.cancel-edit-btn {
+  background: transparent;
+  border: none;
+  font-size: var(--text-base);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-card-btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.save-edit-btn:hover {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.cancel-edit-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.save-edit-btn:disabled,
+.cancel-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 加载与空白状态 */

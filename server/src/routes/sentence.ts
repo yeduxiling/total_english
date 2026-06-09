@@ -180,7 +180,7 @@ router.post('/', (req, res) => {
 // 4. 更新收藏的句子
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { note, analysisResult } = req.body;
+  const { note, analysisResult, sentence } = req.body;
 
   try {
     const db = getDb();
@@ -190,16 +190,26 @@ router.put('/:id', (req, res) => {
       return res.status(404).json({ error: 'Sentence not found.' });
     }
 
-    const analysisResultStr = analysisResult ? JSON.stringify(analysisResult) : existing.analysis_result;
+    const newSentence = sentence !== undefined ? sentence.trim() : existing.sentence;
+    
+    // 如果句子发生改变，则把原有的 AI 分析结果重置为 null 避免数据不一致
+    let analysisResultStr = existing.analysis_result;
+    if (sentence !== undefined && sentence.trim() !== existing.sentence) {
+      analysisResultStr = null;
+    } else if (analysisResult !== undefined) {
+      analysisResultStr = analysisResult ? JSON.stringify(analysisResult) : null;
+    }
+
     const newNote = note !== undefined ? note : existing.note;
 
     db.prepare(`
       UPDATE sentences
-      SET note = ?,
+      SET sentence = ?,
+          note = ?,
           analysis_result = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(newNote, analysisResultStr, id);
+    `).run(newSentence, newNote, analysisResultStr, id);
 
     const updated = db.prepare('SELECT * FROM sentences WHERE id = ?').get(id) as any;
     res.json({

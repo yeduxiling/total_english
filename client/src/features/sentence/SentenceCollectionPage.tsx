@@ -25,6 +25,11 @@ export default function SentenceCollectionPage() {
   const [newSentence, setNewSentence] = useState('');
   const [adding, setAdding] = useState(false);
 
+  // 编辑句子相关状态
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+
 
 
   const fetchSentences = async () => {
@@ -105,6 +110,45 @@ export default function SentenceCollectionPage() {
     }
   };
 
+  const startEditing = (item: SentenceItem) => {
+    setEditingId(item.id);
+    setEditText(item.sentence);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditText('');
+  };
+
+  const handleUpdateSentence = async (id: number) => {
+    if (!editText.trim()) return;
+    setUpdatingId(id);
+    try {
+      const res = await fetch(`/api/sentences/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sentence: editText.trim() }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update sentence');
+      }
+
+      setSentences(sentences.map(s => {
+        if (s.id === id) {
+          return { ...s, sentence: editText.trim(), analysis_result: null };
+        }
+        return s;
+      }));
+      setEditingId(null);
+      setEditText('');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
 
 
   return (
@@ -167,19 +211,59 @@ export default function SentenceCollectionPage() {
                   </span>
                 </div>
                 <div className="card-actions">
-                  <SpeakButton text={item.sentence} size="sm" />
-                  <button 
-                    className="delete-card-btn"
-                    onClick={() => handleDelete(item.id)}
-                    title="Remove from collection"
-                  >
-                    🗑️
-                  </button>
+                  {editingId === item.id ? (
+                    <>
+                      <button 
+                        className="save-edit-btn"
+                        onClick={() => handleUpdateSentence(item.id)}
+                        disabled={updatingId === item.id || !editText.trim()}
+                        title="Save changes"
+                      >
+                        💾
+                      </button>
+                      <button 
+                        className="cancel-edit-btn"
+                        onClick={cancelEditing}
+                        disabled={updatingId === item.id}
+                        title="Cancel"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <SpeakButton text={item.sentence} size="sm" />
+                      <button 
+                        className="edit-card-btn"
+                        onClick={() => startEditing(item)}
+                        title="Edit sentence text"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        className="delete-card-btn"
+                        onClick={() => handleDelete(item.id)}
+                        title="Remove from collection"
+                      >
+                        🗑️
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div className="card-sentence-body">
-                <p className="main-sentence-text">{item.sentence}</p>
+                {editingId === item.id ? (
+                  <textarea
+                    className="edit-sentence-textarea"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    disabled={updatingId === item.id}
+                    rows={4}
+                  />
+                ) : (
+                  <p className="main-sentence-text">{item.sentence}</p>
+                )}
               </div>
 
 
