@@ -93,7 +93,7 @@ export default function SentenceCollectionPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || '录入句子失败');
+        throw new Error(errData.error || 'Failed to add sentence');
       }
 
       setNewSentence('');
@@ -108,14 +108,14 @@ export default function SentenceCollectionPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('确定要取消收藏并删除该句子吗？')) return;
+    if (!window.confirm('Are you sure you want to remove this sentence from your collection?')) return;
 
     try {
       const res = await fetch(`/api/sentences/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
-        throw new Error('删除失败');
+        throw new Error('Failed to delete');
       }
       setSentences(sentences.filter(s => s.id !== id));
     } catch (err: unknown) {
@@ -132,7 +132,7 @@ export default function SentenceCollectionPage() {
         body: JSON.stringify({ note: updatedNote }),
       });
       if (!res.ok) {
-        throw new Error('保存笔记失败');
+        throw new Error('Failed to save note');
       }
       
       setSentences(sentences.map(s => {
@@ -158,7 +158,7 @@ export default function SentenceCollectionPage() {
 
       if (!analyzeRes.ok) {
         const errData = await analyzeRes.json();
-        throw new Error(errData.error || 'AI 分析失败');
+        throw new Error(errData.error || 'AI analysis failed');
       }
 
       const analyzeData = await analyzeRes.json();
@@ -171,7 +171,7 @@ export default function SentenceCollectionPage() {
       });
 
       if (!saveRes.ok) {
-        throw new Error('更新分析结果到数据库失败');
+        throw new Error('Failed to update analysis in database');
       }
 
       setSentences(sentences.map(s => {
@@ -202,25 +202,25 @@ export default function SentenceCollectionPage() {
       <div className="collection-header">
         <div>
           <h1 className="page-title">Sentence Collection</h1>
-          <p className="page-subtitle">管理您收藏的所有句子及 AI 意群分析</p>
+          <p className="page-subtitle">Manage all your saved sentences and their AI analyses.</p>
         </div>
         <button 
           className={`toggle-add-btn ${showAddForm ? 'active' : ''}`}
           onClick={() => setShowAddForm(!showAddForm)}
         >
-          {showAddForm ? '✕ 取消录入' : '＋ 手动录入句子'}
+          {showAddForm ? '✕ Cancel' : '＋ Add Sentence Manually'}
         </button>
       </div>
 
       {showAddForm && (
         <form className="add-sentence-card fade-in" onSubmit={handleAddSentence}>
-          <h2 className="card-section-title">录入新句子</h2>
+          <h2 className="card-section-title">Add New Sentence</h2>
           <div className="form-group">
-            <label htmlFor="new-sentence-input" className="field-label">英文句子 *</label>
+            <label htmlFor="new-sentence-input" className="field-label">English Sentence *</label>
             <textarea
               id="new-sentence-input"
               className="sentence-textarea"
-              placeholder="输入你想收藏的句子内容..."
+              placeholder="Enter the sentence you want to save..."
               value={newSentence}
               onChange={(e) => setNewSentence(e.target.value)}
               required
@@ -228,18 +228,18 @@ export default function SentenceCollectionPage() {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="new-note-input" className="field-label">个人笔记 (可选)</label>
+            <label htmlFor="new-note-input" className="field-label">Personal Note (Optional)</label>
             <textarea
               id="new-note-input"
               className="note-textarea"
-              placeholder="记录关于该句子的心得或语法解析..."
+              placeholder="Write down your thoughts, grammar points, or notes..."
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
               disabled={adding}
             />
           </div>
           <button className="submit-btn" type="submit" disabled={adding || !newSentence.trim()}>
-            {adding ? '正在保存...' : '保存句子'}
+            {adding ? 'Saving...' : 'Save Sentence'}
           </button>
         </form>
       )}
@@ -249,13 +249,13 @@ export default function SentenceCollectionPage() {
       {loading ? (
         <div className="loading-spinner-container">
           <div className="global-spinner" />
-          <p>正在加载收藏夹...</p>
+          <p>Loading collection...</p>
         </div>
       ) : sentences.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📂</div>
-          <p className="empty-title">暂无收藏的句子</p>
-          <p className="empty-desc">您可以通过“Sentence Analysis”分析长难句并添加收藏，或直接在此处手动录入句子。</p>
+          <p className="empty-title">No Saved Sentences</p>
+          <p className="empty-desc">You can analyze sentences on the "Analysis" page and save them, or add new ones here manually.</p>
         </div>
       ) : (
         <div className="sentence-list">
@@ -264,7 +264,7 @@ export default function SentenceCollectionPage() {
               <div className="card-top-row">
                 <div className="source-badges">
                   <span className={`source-badge ${item.source}`}>
-                    {item.source === 'analysis' ? '⚡ AI 分析' : '✍️ 手动录入'}
+                    {item.source === 'analysis' ? '⚡ AI Analysis' : '✍️ Manual'}
                   </span>
                 </div>
                 <div className="card-actions">
@@ -272,7 +272,7 @@ export default function SentenceCollectionPage() {
                   <button 
                     className="delete-card-btn"
                     onClick={() => handleDelete(item.id)}
-                    title="取消收藏"
+                    title="Remove from collection"
                   >
                     🗑️
                   </button>
@@ -302,30 +302,30 @@ export default function SentenceCollectionPage() {
                     ))}
                   </div>
                   <div className="inline-overall-meaning">
-                    <strong>含义：</strong>
+                    <strong>Meaning: </strong>
                     <span>{item.analysis_result.overallMeaning}</span>
                   </div>
                 </div>
               ) : (
                 <div className="no-analysis-placeholder">
-                  <span className="placeholder-text">该句子尚未进行结构分析</span>
+                  <span className="placeholder-text">This sentence has not been analyzed yet.</span>
                   <button
                     className={`inline-analyze-btn ${analyzingIds[item.id] ? 'loading' : ''}`}
                     onClick={() => handleInlineAnalyze(item.id, item.sentence)}
                     disabled={analyzingIds[item.id]}
                   >
-                    {analyzingIds[item.id] ? 'AI 分析中...' : '⚡ AI 句子解析'}
+                    {analyzingIds[item.id] ? 'Analyzing...' : '⚡ AI Analyze'}
                   </button>
                 </div>
               )}
 
               <div className="card-note-section">
                 <div className="note-header">
-                  <span className="note-icon">📝 笔记:</span>
+                  <span className="note-icon">📝 Note:</span>
                   {isEditingId === item.id ? (
                     <div className="note-edit-buttons">
-                      <button className="note-action-btn save" onClick={() => handleSaveNote(item.id)}>保存</button>
-                      <button className="note-action-btn cancel" onClick={() => setIsEditingId(null)}>取消</button>
+                      <button className="note-action-btn save" onClick={() => handleSaveNote(item.id)}>Save</button>
+                      <button className="note-action-btn cancel" onClick={() => setIsEditingId(null)}>Cancel</button>
                     </div>
                   ) : (
                     <button 
@@ -335,7 +335,7 @@ export default function SentenceCollectionPage() {
                         setEditingNotes(prev => ({ ...prev, [item.id]: item.note || '' }));
                       }}
                     >
-                      编辑
+                      Edit
                     </button>
                   )}
                 </div>
@@ -348,7 +348,7 @@ export default function SentenceCollectionPage() {
                   />
                 ) : (
                   <p className={`card-note-text ${!item.note ? 'empty' : ''}`}>
-                    {item.note || '暂无笔记描述'}
+                    {item.note || 'No notes added.'}
                   </p>
                 )}
               </div>

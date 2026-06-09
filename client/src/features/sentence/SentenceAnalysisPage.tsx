@@ -58,7 +58,7 @@ export default function SentenceAnalysisPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || '分析失败');
+        throw new Error(errData.error || 'Analysis failed');
       }
 
       const data: AnalysisResponse = await res.json();
@@ -90,11 +90,11 @@ export default function SentenceAnalysisPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || '收藏失败');
+        throw new Error(errData.error || 'Save failed');
       }
 
       setIsSaved(true);
-      setSaveSuccessMsg('句子已成功加入收藏！');
+      setSaveSuccessMsg('Sentence successfully added to collection!');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -116,14 +116,14 @@ export default function SentenceAnalysisPage() {
     <div className="sentence-analysis-page">
       <div className="page-header">
         <h1 className="page-title">Sentence Analysis</h1>
-        <p className="page-subtitle">利用 AI 拆分意群、分析结构、轻松理解复杂句子</p>
+        <p className="page-subtitle">Analyze structures and semantic chunks of complex sentences using AI.</p>
       </div>
 
       <div className="analysis-card">
         <div className="input-group">
           <textarea
             className="sentence-textarea"
-            placeholder="输入您想分析的长难句或看不懂的句子..."
+            placeholder="Enter an English sentence you want to analyze..."
             value={sentence}
             onChange={(e) => setSentence(e.target.value)}
             disabled={loading}
@@ -131,7 +131,7 @@ export default function SentenceAnalysisPage() {
           
           <div className="action-row">
             <div className="sample-sentences">
-              <span className="sample-label">💡 试试范例：</span>
+              <span className="sample-label">💡 Try examples:</span>
               {SAMPLE_SENTENCES.map((s, idx) => (
                 <button
                   key={idx}
@@ -142,7 +142,7 @@ export default function SentenceAnalysisPage() {
                   }}
                   disabled={loading}
                 >
-                  范例 {idx + 1}
+                  Example {idx + 1}
                 </button>
               ))}
             </div>
@@ -155,10 +155,10 @@ export default function SentenceAnalysisPage() {
               {loading ? (
                 <>
                   <span className="btn-spinner" />
-                  分析中...
+                  Analyzing...
                 </>
               ) : (
-                'AI 分析'
+                'Analyze'
               )}
             </button>
           </div>
@@ -171,7 +171,7 @@ export default function SentenceAnalysisPage() {
         <div className="result-container">
           <div className="result-card fade-in">
             <div className="result-card-header">
-              <h2 className="result-card-title">1. Logical Chunking (意群拆分与释义)</h2>
+              <h2 className="result-card-title">1. Logical Chunking</h2>
               <SpeakButton text={analysisResult.sentence} size="md" />
             </div>
 
@@ -197,27 +197,27 @@ export default function SentenceAnalysisPage() {
           </div>
 
           <div className="result-card fade-in delay-1">
-            <h2 className="result-card-title">2. Overall Meaning (句子总体含义)</h2>
+            <h2 className="result-card-title">2. Overall Meaning</h2>
             <blockquote className="overall-meaning-quote">
               {analysisResult.analysis.overallMeaning}
             </blockquote>
           </div>
 
           <div className="result-card fade-in delay-2">
-            <h2 className="result-card-title">💾 收藏与笔记</h2>
+            <h2 className="result-card-title">💾 Save & Note</h2>
             <div className="save-section">
               {isSaved ? (
                 <div className="saved-badge">
-                  <span>✓ 句子已在收藏中</span>
+                  <span>✓ Sentence saved in Collection</span>
                 </div>
               ) : (
                 <div className="save-form">
                   <div className="note-input-wrapper">
-                    <label htmlFor="note" className="note-label">添加个人笔记 (可选)</label>
+                    <label htmlFor="note" className="note-label">Personal Note (Optional)</label>
                     <textarea
                       id="note"
                       className="note-textarea"
-                      placeholder="写下你对这个句子的理解、语法要点或重点词汇..."
+                      placeholder="Write down your thoughts, grammar points, or key vocabulary..."
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       disabled={saving}
@@ -228,7 +228,7 @@ export default function SentenceAnalysisPage() {
                     onClick={handleSave}
                     disabled={saving}
                   >
-                    {saving ? '正在收藏...' : '加入收藏 Collection'}
+                    {saving ? 'Saving...' : 'Add to Collection'}
                   </button>
                 </div>
               )}
