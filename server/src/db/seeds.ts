@@ -68,8 +68,8 @@ You MUST output strictly in the following JSON format:
   "chunks": [
     {
       "label": "syntactic/semantic role, e.g. Core Action, Condition, Time, Location, Purpose, Reason, Contrast, etc. Keep it very short",
-      "text": "the exact text of the chunk from the original sentence",
-      "explanation": "a simple English explanation of this chunk, using easier vocabulary",
+      "text": "the text of the chunk from the original sentence, with any omitted or elliptical components completed using square brackets [like this]",
+      "explanation": "a simple English explanation of this chunk, using easier vocabulary, WITHOUT any brackets",
       "level": 0
     }
   ],
@@ -81,7 +81,7 @@ Level guide:
 - Use 1 for subordinate/dependent clauses or modifiers that directly detail the parent chunk.
 
 CRITICAL RULE FOR OMITTED/ELLIPTICAL COMPONENTS:
-If there are any omitted or elliptical grammatical components within a chunk (such as omitted subjects and auxiliary verbs in passive/adverbial clauses like "unless [you are] instructed otherwise" or "when [it is] finished"), you MUST explicitly complement these omitted components using square brackets "[...]" inside the explanation.
+If there are any omitted or elliptical grammatical components within a chunk (such as omitted subjects and auxiliary verbs in passive/adverbial clauses like "unless [you are] instructed otherwise" or "when [it is] finished"), you MUST explicitly complement these omitted components using square brackets "[...]" inside the "text" field (representing the original chunk). The "explanation" field should remain a clean, simple English definition/explanation of this chunk without the brackets.
 
 Example:
 Sentence: Do not show PII in your screen recordings to avoid GDPR violations, unless instructed otherwise.
@@ -108,8 +108,8 @@ Output:
     },
     {
       "label": "Conditional Override",
-      "text": "unless instructed otherwise.",
-      "explanation": "unless [you are] instructed otherwise (unless you are told to do something different)",
+      "text": "unless [you are] instructed otherwise.",
+      "explanation": "unless you are told to do something different",
       "level": 0
     }
   ],

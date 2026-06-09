@@ -3,23 +3,13 @@ import type { FormEvent } from 'react';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import './SentenceCollectionPage.css';
 
-interface Chunk {
-  label: string;
-  text: string;
-  explanation: string;
-  level: number;
-}
 
-interface AnalysisData {
-  chunks: Chunk[];
-  overallMeaning: string;
-}
 
 interface SentenceItem {
   id: number;
   sentence: string;
   source: string; // 'analysis' | 'manual'
-  analysis_result: AnalysisData | null;
+  analysis_result: unknown;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -35,8 +25,7 @@ export default function SentenceCollectionPage() {
   const [newSentence, setNewSentence] = useState('');
   const [adding, setAdding] = useState(false);
 
-  // 单条句子原位 AI 分析 loading 状态 (以 id 为 key)
-  const [analyzingIds, setAnalyzingIds] = useState<{ [key: number]: boolean }>({});
+
 
   const fetchSentences = async () => {
     setLoading(true);
@@ -116,62 +105,14 @@ export default function SentenceCollectionPage() {
     }
   };
 
-  const handleInlineAnalyze = async (id: number, text: string) => {
-    setAnalyzingIds(prev => ({ ...prev, [id]: true }));
-    try {
-      const analyzeRes = await fetch('/api/sentences/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sentence: text }),
-      });
 
-      if (!analyzeRes.ok) {
-        const errData = await analyzeRes.json();
-        throw new Error(errData.error || 'AI analysis failed');
-      }
-
-      const analyzeData = await analyzeRes.json();
-      const analysisResult = analyzeData.analysis;
-
-      const saveRes = await fetch(`/api/sentences/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysisResult }),
-      });
-
-      if (!saveRes.ok) {
-        throw new Error('Failed to update analysis in database');
-      }
-
-      setSentences(sentences.map(s => {
-        if (s.id === id) {
-          return { ...s, analysis_result: analysisResult };
-        }
-        return s;
-      }));
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : String(err));
-    } finally {
-      setAnalyzingIds(prev => ({ ...prev, [id]: false }));
-    }
-  };
-
-  const getBadgeColorClass = (label: string): string => {
-    const l = label.toLowerCase();
-    if (l.includes('prohibition') || l.includes('negation') || l.includes('avoid')) return 'badge-danger';
-    if (l.includes('core') || l.includes('action') || l.includes('subject')) return 'badge-primary';
-    if (l.includes('condition') || l.includes('if') || l.includes('unless')) return 'badge-warning';
-    if (l.includes('purpose') || l.includes('consequence') || l.includes('result')) return 'badge-info';
-    if (l.includes('context') || l.includes('location') || l.includes('time')) return 'badge-success';
-    return 'badge-secondary';
-  };
 
   return (
     <div className="sentence-collection-page">
       <div className="collection-header">
         <div>
           <h1 className="page-title">Sentence Collection</h1>
-          <p className="page-subtitle">Manage all your saved sentences and their AI analyses.</p>
+          <p className="page-subtitle">Manage all your saved sentences.</p>
         </div>
         <button 
           className={`toggle-add-btn ${showAddForm ? 'active' : ''}`}
@@ -241,40 +182,7 @@ export default function SentenceCollectionPage() {
                 <p className="main-sentence-text">{item.sentence}</p>
               </div>
 
-              {item.analysis_result ? (
-                <div className="card-analysis-result">
-                  <div className="inline-chunk-list">
-                    {item.analysis_result.chunks.map((chunk, idx) => (
-                      <div key={idx} className={`inline-chunk-item ${chunk.level > 0 ? 'inline-sub' : ''}`}>
-                        <div className="inline-chunk-details">
-                          <div className="inline-chunk-top">
-                            <span className={`chunk-badge ${getBadgeColorClass(chunk.label)}`}>
-                              {chunk.label}
-                            </span>
-                            <span className="inline-chunk-text">{chunk.text}</span>
-                          </div>
-                          <span className="inline-chunk-explanation">{chunk.explanation}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="inline-overall-meaning">
-                    <strong>Meaning: </strong>
-                    <span>{item.analysis_result.overallMeaning}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="no-analysis-placeholder">
-                  <span className="placeholder-text">This sentence has not been analyzed yet.</span>
-                  <button
-                    className={`inline-analyze-btn ${analyzingIds[item.id] ? 'loading' : ''}`}
-                    onClick={() => handleInlineAnalyze(item.id, item.sentence)}
-                    disabled={analyzingIds[item.id]}
-                  >
-                    {analyzingIds[item.id] ? 'Analyzing...' : '⚡ AI Analyze'}
-                  </button>
-                </div>
-              )}
+
             </div>
           ))}
         </div>
