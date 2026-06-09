@@ -78,21 +78,23 @@
 }
 
 .submit-btn {
-  background: var(--color-accent);
+  background: linear-gradient(135deg, var(--color-accent), #4f46e5);
   border: none;
   color: #ffffff;
   border-radius: var(--radius-md);
-  padding: var(--space-2-5) var(--space-6);
+  padding: 10px 24px;
   font-size: var(--text-sm);
   font-weight: var(--font-bold);
   cursor: pointer;
   align-self: flex-start;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
   transition: all var(--transition-base);
 }
 
 .submit-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.25);
+  opacity: 0.95;
 }
 
 /* 列表与卡片 */
