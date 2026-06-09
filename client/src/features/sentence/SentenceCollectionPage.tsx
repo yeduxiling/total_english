@@ -33,12 +33,7 @@ export default function SentenceCollectionPage() {
   // 新建句子表单状态
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSentence, setNewSentence] = useState('');
-  const [newNote, setNewNote] = useState('');
   const [adding, setAdding] = useState(false);
-
-  // 编辑笔记状态 (以 id 为 key)
-  const [editingNotes, setEditingNotes] = useState<{ [key: number]: string }>({});
-  const [isEditingId, setIsEditingId] = useState<number | null>(null);
 
   // 单条句子原位 AI 分析 loading 状态 (以 id 为 key)
   const [analyzingIds, setAnalyzingIds] = useState<{ [key: number]: boolean }>({});
@@ -86,8 +81,7 @@ export default function SentenceCollectionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sentence: newSentence.trim(),
-          source: 'manual',
-          note: newNote.trim()
+          source: 'manual'
         }),
       });
 
@@ -97,7 +91,6 @@ export default function SentenceCollectionPage() {
       }
 
       setNewSentence('');
-      setNewNote('');
       setShowAddForm(false);
       fetchSentences();
     } catch (err: unknown) {
@@ -118,30 +111,6 @@ export default function SentenceCollectionPage() {
         throw new Error('Failed to delete');
       }
       setSentences(sentences.filter(s => s.id !== id));
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : String(err));
-    }
-  };
-
-  const handleSaveNote = async (id: number) => {
-    const updatedNote = editingNotes[id];
-    try {
-      const res = await fetch(`/api/sentences/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note: updatedNote }),
-      });
-      if (!res.ok) {
-        throw new Error('Failed to save note');
-      }
-      
-      setSentences(sentences.map(s => {
-        if (s.id === id) {
-          return { ...s, note: updatedNote };
-        }
-        return s;
-      }));
-      setIsEditingId(null);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : String(err));
     }
@@ -227,17 +196,6 @@ export default function SentenceCollectionPage() {
               disabled={adding}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="new-note-input" className="field-label">Personal Note (Optional)</label>
-            <textarea
-              id="new-note-input"
-              className="note-textarea"
-              placeholder="Write down your thoughts, grammar points, or notes..."
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              disabled={adding}
-            />
-          </div>
           <button className="submit-btn" type="submit" disabled={adding || !newSentence.trim()}>
             {adding ? 'Saving...' : 'Save Sentence'}
           </button>
@@ -288,7 +246,6 @@ export default function SentenceCollectionPage() {
                   <div className="inline-chunk-list">
                     {item.analysis_result.chunks.map((chunk, idx) => (
                       <div key={idx} className={`inline-chunk-item ${chunk.level > 0 ? 'inline-sub' : ''}`}>
-                        {chunk.level > 0 && <span className="sub-arrow">↳</span>}
                         <div className="inline-chunk-details">
                           <div className="inline-chunk-top">
                             <span className={`chunk-badge ${getBadgeColorClass(chunk.label)}`}>
@@ -318,40 +275,6 @@ export default function SentenceCollectionPage() {
                   </button>
                 </div>
               )}
-
-              <div className="card-note-section">
-                <div className="note-header">
-                  <span className="note-icon">📝 Note:</span>
-                  {isEditingId === item.id ? (
-                    <div className="note-edit-buttons">
-                      <button className="note-action-btn save" onClick={() => handleSaveNote(item.id)}>Save</button>
-                      <button className="note-action-btn cancel" onClick={() => setIsEditingId(null)}>Cancel</button>
-                    </div>
-                  ) : (
-                    <button 
-                      className="note-action-btn edit"
-                      onClick={() => {
-                        setIsEditingId(item.id);
-                        setEditingNotes(prev => ({ ...prev, [item.id]: item.note || '' }));
-                      }}
-                    >
-                      Edit
-                    </button>
-                  )}
-                </div>
-
-                {isEditingId === item.id ? (
-                  <textarea
-                    className="card-note-textarea"
-                    value={editingNotes[item.id] || ''}
-                    onChange={(e) => setEditingNotes({ ...editingNotes, [item.id]: e.target.value })}
-                  />
-                ) : (
-                  <p className={`card-note-text ${!item.note ? 'empty' : ''}`}>
-                    {item.note || 'No notes added.'}
-                  </p>
-                )}
-              </div>
             </div>
           ))}
         </div>

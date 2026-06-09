@@ -32,9 +32,8 @@ export default function SentenceAnalysisPage() {
   const [error, setError] = useState('');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
 
-  // 收藏与笔记状态
+  // 收藏状态
   const [isSaved, setIsSaved] = useState(false);
-  const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
 
@@ -46,7 +45,6 @@ export default function SentenceAnalysisPage() {
     setError('');
     setAnalysisResult(null);
     setIsSaved(false);
-    setNote('');
     setSaveSuccessMsg('');
 
     try {
@@ -83,8 +81,7 @@ export default function SentenceAnalysisPage() {
         body: JSON.stringify({
           sentence: analysisResult.sentence,
           source: 'analysis',
-          analysisResult: analysisResult.analysis,
-          note: note.trim()
+          analysisResult: analysisResult.analysis
         }),
       });
 
@@ -181,7 +178,6 @@ export default function SentenceAnalysisPage() {
                   key={idx} 
                   className={`chunk-item ${chunk.level > 0 ? 'sub-chunk' : ''}`}
                 >
-                  {chunk.level > 0 && <span className="sub-arrow">↳</span>}
                   <div className="chunk-content">
                     <div className="chunk-top">
                       <span className={`chunk-badge ${getBadgeColorClass(chunk.label)}`}>
@@ -204,7 +200,7 @@ export default function SentenceAnalysisPage() {
           </div>
 
           <div className="result-card fade-in delay-2">
-            <h2 className="result-card-title">💾 Save & Note</h2>
+            <h2 className="result-card-title">💾 Save to Collection</h2>
             <div className="save-section">
               {isSaved ? (
                 <div className="saved-badge">
@@ -212,17 +208,6 @@ export default function SentenceAnalysisPage() {
                 </div>
               ) : (
                 <div className="save-form">
-                  <div className="note-input-wrapper">
-                    <label htmlFor="note" className="note-label">Personal Note (Optional)</label>
-                    <textarea
-                      id="note"
-                      className="note-textarea"
-                      placeholder="Write down your thoughts, grammar points, or key vocabulary..."
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      disabled={saving}
-                    />
-                  </div>
                   <button
                     className="save-btn"
                     onClick={handleSave}
