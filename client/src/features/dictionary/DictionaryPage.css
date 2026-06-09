@@ -470,3 +470,113 @@
   background: rgba(239, 68, 68, 0.06);
   border-radius: var(--radius-sm);
 }
+
+/* ========== 移动端响应式 ========== */
+@media (max-width: 768px) {
+  .dictionary-page {
+    gap: var(--space-4);
+  }
+
+  /* --- Toolbar --- */
+  .dict-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .dict-search-wrap {
+    max-width: 100%;
+  }
+
+  .dict-filters {
+    justify-content: space-between;
+  }
+
+  .dict-stats {
+    justify-content: flex-start;
+  }
+
+  /* --- Card --- */
+  .dict-card {
+    overflow: hidden;
+  }
+
+  .dict-card-header {
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .dict-card-left {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .dict-word {
+    font-size: var(--text-base);
+    word-break: break-word;
+  }
+
+  .dict-card-right {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .dict-tags-preview {
+    display: none;
+  }
+
+  /* --- Card body (展开后) --- */
+  .dict-card-body {
+    padding: 0 var(--space-3) var(--space-4);
+    padding-top: var(--space-3);
+    gap: 12px;
+  }
+
+  /* --- Meaning block --- */
+  .dict-meaning-block {
+    padding: var(--space-3);
+    gap: 10px;
+  }
+
+  .dict-meaning-text {
+    font-size: var(--text-sm);
+    word-break: break-word;
+  }
+
+  /* --- Chips --- */
+  .dict-chip-synonym,
+  .dict-chip-collocation {
+    font-size: var(--text-xs);
+    padding: 3px 10px;
+  }
+
+  /* --- Examples --- */
+  .dict-example {
+    font-size: var(--text-base);
+    padding-left: var(--space-3);
+    word-break: break-word;
+  }
+
+  /* --- Tags --- */
+  .dict-meaning-tags {
+    margin-top: var(--space-3);
+  }
+
+  .dict-tag-add-container {
+    width: 130px;
+  }
+
+  /* --- Footer --- */
+  .dict-card-footer {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+  }
+
+  /* --- Reroll controls --- */
+  .reroll-controls {
+    flex-wrap: wrap !important;
+    gap: 8px;
+  }
+}

@@ -4,6 +4,8 @@ import LookupPage from './features/lookup/LookupPage';
 import DictionaryPage from './features/dictionary/DictionaryPage';
 import ReviewPage from './features/review/ReviewPage';
 import SettingsPage from './features/settings/SettingsPage';
+import SentenceAnalysisPage from './features/sentence/SentenceAnalysisPage';
+import SentenceCollectionPage from './features/sentence/SentenceCollectionPage';
 
 export default function App() {
   return (
@@ -12,6 +14,8 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<LookupPage />} />
           <Route path="/dictionary" element={<DictionaryPage />} />
+          <Route path="/sentence/analysis" element={<SentenceAnalysisPage />} />
+          <Route path="/sentence/collection" element={<SentenceCollectionPage />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

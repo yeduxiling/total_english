@@ -129,7 +129,6 @@ export function initDatabase(): void {
     );
     CREATE INDEX IF NOT EXISTS idx_variants_meaning ON meaning_variants(meaning_id);
 
-    -- 复习记录表
     CREATE TABLE IF NOT EXISTS review_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       meaning_id TEXT NOT NULL,
@@ -138,6 +137,19 @@ export function initDatabase(): void {
       FOREIGN KEY (meaning_id) REFERENCES meanings(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_review_logs_meaning ON review_logs(meaning_id);
+
+    -- 句子收藏与分析表
+    CREATE TABLE IF NOT EXISTS sentences (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sentence TEXT NOT NULL,
+      source TEXT,
+      analysis_result TEXT,
+      note TEXT,
+      is_favorite INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_sentences_text ON sentences(sentence);
   `);
 
   // 插入种子数据

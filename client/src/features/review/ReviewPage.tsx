@@ -26,17 +26,182 @@ interface ReviewChunk {
  * 在例句中高亮 chunk 关键词（大小写不敏感）
  * 返回 JSX 数组
  */
+const IRREGULAR_VERBS: Record<string, string[]> = {
+  be: ['am', 'is', 'are', 'was', 'were', 'been', 'being'],
+  have: ['has', 'had', 'having'],
+  do: ['does', 'did', 'done', 'doing'],
+  go: ['goes', 'going', 'went', 'gone'],
+  get: ['gets', 'getting', 'got', 'gotten'],
+  make: ['makes', 'making', 'made'],
+  take: ['takes', 'taking', 'took', 'taken'],
+  see: ['sees', 'seeing', 'saw', 'seen'],
+  come: ['comes', 'coming', 'came'],
+  say: ['says', 'saying', 'said'],
+  find: ['finds', 'finding', 'found'],
+  give: ['gives', 'giving', 'gave', 'given'],
+  keep: ['keeps', 'keeping', 'kept'],
+  write: ['writes', 'writing', 'wrote', 'written'],
+  stand: ['stands', 'standing', 'stood'],
+  bring: ['brings', 'bringing', 'brought'],
+  run: ['runs', 'running', 'ran'],
+  begin: ['begins', 'beginning', 'began', 'begun'],
+  eat: ['eats', 'eating', 'ate', 'eaten'],
+  drink: ['drinks', 'drinking', 'drank', 'drunk'],
+  sleep: ['sleeps', 'sleeping', 'slept'],
+  speak: ['speaks', 'speaking', 'spoke', 'spoken'],
+  tell: ['tells', 'telling', 'told'],
+  think: ['thinks', 'thinking', 'thought'],
+  buy: ['buys', 'buying', 'bought'],
+  sell: ['sells', 'selling', 'sold'],
+  build: ['builds', 'building', 'built'],
+  choose: ['chooses', 'choosing', 'chose', 'chosen'],
+  draw: ['draws', 'drawing', 'drew', 'drawn'],
+  drive: ['drives', 'driving', 'drove', 'driven'],
+  fall: ['falls', 'falling', 'fell', 'fallen'],
+  feel: ['feels', 'feeling', 'felt'],
+  fight: ['fights', 'fighting', 'fought'],
+  forget: ['forgets', 'forgetting', 'forgot', 'forgotten'],
+  grow: ['grows', 'growing', 'grew', 'grown'],
+  hear: ['hears', 'hearing', 'heard'],
+  hide: ['hides', 'hiding', 'hid', 'hidden'],
+  know: ['knows', 'knowing', 'knew', 'known'],
+  leave: ['leaves', 'leaving', 'left'],
+  lose: ['loses', 'losing', 'lost'],
+  meet: ['meets', 'meeting', 'met'],
+  pay: ['pays', 'paying', 'paid'],
+  read: ['reads', 'reading'],
+  ring: ['rings', 'ringing', 'rang', 'rung'],
+  rise: ['rises', 'rising', 'rose', 'risen'],
+  send: ['sends', 'sending', 'sent'],
+  shake: ['shakes', 'shaking', 'shook', 'shaken'],
+  sing: ['sings', 'singing', 'sang', 'sung'],
+  sit: ['sits', 'sitting', 'sat'],
+  spend: ['spends', 'spending', 'spent'],
+  steal: ['steals', 'stealing', 'stole', 'stolen'],
+  swim: ['swims', 'swimming', 'swam', 'swum'],
+  teach: ['teaches', 'teaching', 'taught'],
+  throw: ['throws', 'throwing', 'threw', 'thrown'],
+  understand: ['understands', 'understanding', 'understood'],
+  wear: ['wears', 'wearing', 'wore', 'worn'],
+  win: ['wins', 'winning', 'won'],
+  fly: ['flies', 'flying', 'flew', 'flown'],
+  lay: ['lays', 'laying', 'laid'],
+  lie: ['lies', 'lying', 'lay', 'lain'],
+  ride: ['rides', 'riding', 'rode', 'ridden'],
+  seek: ['seeks', 'seeking', 'sought'],
+  slide: ['slides', 'sliding', 'slid'],
+  stick: ['sticks', 'sticking', 'stuck'],
+  strike: ['strikes', 'striking', 'struck'],
+  tear: ['tears', 'tearing', 'tore', 'torn'],
+  wake: ['wakes', 'waking', 'woke', 'woken'],
+  shoot: ['shoots', 'shooting', 'shot'],
+  feed: ['feeds', 'feeding', 'fed'],
+  lead: ['leads', 'leading', 'led'],
+  break: ['breaks', 'breaking', 'broke', 'broken'],
+  catch: ['catches', 'catching', 'caught'],
+  mean: ['means', 'meaning', 'meant'],
+  deal: ['deals', 'dealing', 'dealt'],
+  creep: ['creeps', 'creeping', 'crept'],
+  sweep: ['sweeps', 'sweeping', 'swept'],
+  weep: ['weeps', 'weeping', 'wept'],
+  kneel: ['kneels', 'kneeling', 'knelt'],
+  spill: ['spills', 'spilling', 'spilt', 'spilled'],
+  dream: ['dreams', 'dreaming', 'dreamt', 'dreamed'],
+  lean: ['leans', 'leaning', 'leant', 'leaned'],
+  leap: ['leaps', 'leaping', 'leapt', 'leaped'],
+  spell: ['spells', 'spelling', 'spelt', 'spelled'],
+  smell: ['smells', 'smelling', 'smelt', 'smelled']
+};
+
+function getWordForms(word: string): string[] {
+  const lower = word.toLowerCase();
+  const forms = new Set<string>([lower]);
+
+  if (IRREGULAR_VERBS[lower]) {
+    IRREGULAR_VERBS[lower].forEach(f => forms.add(f));
+  }
+
+  const isConsonant = (char: string) => {
+    return /^[a-z]$/.test(char) && !['a', 'e', 'i', 'o', 'u'].includes(char);
+  };
+
+  // 1. 第三人称单数 (s-form)
+  if (lower.endsWith('y') && lower.length > 1 && isConsonant(lower[lower.length - 2])) {
+    forms.add(lower.slice(0, -1) + 'ies');
+  } else if (
+    lower.endsWith('s') ||
+    lower.endsWith('x') ||
+    lower.endsWith('z') ||
+    lower.endsWith('ch') ||
+    lower.endsWith('sh') ||
+    lower.endsWith('o')
+  ) {
+    forms.add(lower + 'es');
+  } else {
+    forms.add(lower + 's');
+  }
+
+  // 2. 过去式/过去分词 (ed-form)
+  if (lower.endsWith('e')) {
+    forms.add(lower + 'd');
+  } else if (lower.endsWith('y') && lower.length > 1 && isConsonant(lower[lower.length - 2])) {
+    forms.add(lower.slice(0, -1) + 'ied');
+  } else {
+    forms.add(lower + 'ed');
+    if (
+      lower.length >= 3 &&
+      isConsonant(lower[lower.length - 1]) &&
+      ['a', 'e', 'i', 'o', 'u'].includes(lower[lower.length - 2]) &&
+      isConsonant(lower[lower.length - 3]) &&
+      !['w', 'x', 'y'].includes(lower[lower.length - 1])
+    ) {
+      forms.add(lower + lower[lower.length - 1] + 'ed');
+    }
+  }
+
+  // 3. 现在分词 (ing-form)
+  if (lower.endsWith('e') && !lower.endsWith('ee') && !lower.endsWith('oe') && !lower.endsWith('ye')) {
+    forms.add(lower.slice(0, -1) + 'ing');
+  } else if (lower.endsWith('ie') && lower.length > 2) {
+    forms.add(lower.slice(0, -2) + 'ying');
+  } else {
+    forms.add(lower + 'ing');
+    if (
+      lower.length >= 3 &&
+      isConsonant(lower[lower.length - 1]) &&
+      ['a', 'e', 'i', 'o', 'u'].includes(lower[lower.length - 2]) &&
+      isConsonant(lower[lower.length - 3]) &&
+      !['w', 'x', 'y'].includes(lower[lower.length - 1])
+    ) {
+      forms.add(lower + lower[lower.length - 1] + 'ing');
+    }
+  }
+
+  return Array.from(forms);
+}
+
 function highlightChunk(sentence: string, word: string): React.ReactNode[] {
   if (!word) return [sentence];
 
-  // 对 word 中的特殊正则字符转义
-  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // 匹配以 chunk 为词根的完整单词（含变形后缀，如 deploy → deploying）
-  const regex = new RegExp(`(\\b${escaped}\\w*\\b)`, 'gi');
+  const words = word.trim().split(/\s+/);
+  if (words.length === 0) return [sentence];
+
+  const firstWordForms = getWordForms(words[0]);
+  const escapedForms = firstWordForms.map(f => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const firstWordPattern = `(${escapedForms.join('|')})`;
+
+  let pattern = firstWordPattern;
+  for (let i = 1; i < words.length; i++) {
+    const escapedRest = words[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    pattern += `\\s+${escapedRest}(?:s|es)?`;
+  }
+
+  const regex = new RegExp(`(\\b${pattern}\\b)`, 'gi');
+  const testRegex = new RegExp(`^${pattern}$`, 'i');
   const parts = sentence.split(regex);
 
   return parts.map((part, i) =>
-    regex.test(part) ? (
+    testRegex.test(part) ? (
       <span key={i} className="chunk-highlight">{part}</span>
     ) : (
       <span key={i}>{part}</span>
