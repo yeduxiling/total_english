@@ -80,6 +80,9 @@ Level guide:
 - Use 0 for main clauses/primary chunks.
 - Use 1 for subordinate/dependent clauses or modifiers that directly detail the parent chunk.
 
+CRITICAL RULE FOR OMITTED/ELLIPTICAL COMPONENTS:
+If there are any omitted or elliptical grammatical components within a chunk (such as omitted subjects and auxiliary verbs in passive/adverbial clauses like "unless [you are] instructed otherwise" or "when [it is] finished"), you MUST explicitly complement these omitted components using square brackets "[...]" inside the explanation.
+
 Example:
 Sentence: Do not show PII in your screen recordings to avoid GDPR violations, unless instructed otherwise.
 Output:
@@ -106,7 +109,7 @@ Output:
     {
       "label": "Conditional Override",
       "text": "unless instructed otherwise.",
-      "explanation": "unless someone tells you to do it",
+      "explanation": "unless [you are] instructed otherwise (unless you are told to do something different)",
       "level": 0
     }
   ],

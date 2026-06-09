@@ -232,22 +232,23 @@
 }
 
 .inline-chunk-text {
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: var(--font-bold);
   color: var(--color-text-primary);
 }
 
 .inline-chunk-explanation {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
   font-style: italic;
+  line-height: 1.5;
 }
 
 .inline-overall-meaning {
   border-top: 1px dashed var(--color-border);
   padding-top: var(--space-3);
-  font-size: var(--text-sm);
-  line-height: 1.5;
+  font-size: var(--text-base);
+  line-height: 1.6;
   color: var(--color-text-primary);
 }
 
