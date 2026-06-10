@@ -9,9 +9,15 @@ interface Chunk {
   level: number;
 }
 
+interface CollocationOrDifficulty {
+  point: string;
+  explanation: string;
+}
+
 interface AnalysisData {
   chunks: Chunk[];
   overallMeaning: string;
+  collocationsAndDifficulties?: CollocationOrDifficulty[];
 }
 
 interface AnalysisResponse {
@@ -201,6 +207,26 @@ export default function SentenceAnalysisPage() {
           </div>
 
           <div className="result-card fade-in delay-2">
+            <h2 className="result-card-title">3. Common Collocations & Difficult Points</h2>
+            <div className="collocation-list">
+              {analysisResult.analysis.collocationsAndDifficulties && 
+               analysisResult.analysis.collocationsAndDifficulties.length > 0 ? (
+                analysisResult.analysis.collocationsAndDifficulties.map((item, idx) => (
+                  <div key={idx} className="collocation-item">
+                    <div className="collocation-point-row">
+                      <span className="collocation-bullet">📌</span>
+                      <strong className="collocation-point">{item.point}</strong>
+                    </div>
+                    <p className="collocation-explanation">{item.explanation}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="no-collocations-placeholder">No common collocations or grammatical difficulties identified in this sentence.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="result-card fade-in delay-3">
             <h2 className="result-card-title">💾 Save to Collection</h2>
             <div className="save-section">
               {isSaved ? (

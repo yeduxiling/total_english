@@ -417,6 +417,68 @@
   animation-delay: 0.2s;
 }
 
+.delay-3 {
+  animation-delay: 0.3s;
+}
+
+/* 常见搭配和难点解析样式 */
+.collocation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.collocation-item {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  transition: all var(--transition-fast);
+}
+
+.collocation-item:hover {
+  border-color: var(--color-accent-light);
+  transform: translateY(-0.5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+}
+
+.collocation-point-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.collocation-bullet {
+  font-size: var(--text-sm);
+  display: inline-flex;
+  align-items: center;
+}
+
+.collocation-point {
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: var(--font-bold);
+}
+
+.collocation-explanation {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+  margin: 0;
+  padding-left: calc(var(--space-2) + 16px);
+}
+
+.no-collocations-placeholder {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  margin: 0;
+  text-align: center;
+  padding: var(--space-4) 0;
+}
+
 @keyframes cardFadeIn {
   to {
     opacity: 1;

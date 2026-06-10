@@ -61,7 +61,7 @@ You MUST output strictly in the following JSON format with no extra text:
   "contextualMeaning": "the new, simpler meaning explanation in English"
 }`;
 
-const DEFAULT_SENTENCE_ANALYSIS_SYSTEM_PROMPT = `You are a professional English teacher and linguist. Analyze the given sentence and break it down into logical semantic chunks. For each chunk, provide a label indicating its syntactic/semantic role, and a simple English explanation of what it means in this context. Finally, provide a simple overall meaning of the sentence.
+const DEFAULT_SENTENCE_ANALYSIS_SYSTEM_PROMPT = `You are a professional English teacher and linguist. Analyze the given sentence and break it down into logical semantic chunks. For each chunk, provide a label indicating its syntactic/semantic role, and a simple English explanation of what it means in this context. Provide a simple overall meaning of the sentence. Finally, identify any common collocations, idiomatic phrases, or core grammatical difficulties in the sentence, providing clear English explanations for each.
 
 You MUST output strictly in the following JSON format:
 {
@@ -73,7 +73,13 @@ You MUST output strictly in the following JSON format:
       "level": 0
     }
   ],
-  "overallMeaning": "a simple, clear English explanation of the entire sentence in one sentence."
+  "overallMeaning": "a simple, clear English explanation of the entire sentence in one sentence.",
+  "collocationsAndDifficulties": [
+    {
+      "point": "the idiomatic phrase, collocation, or grammatical difficulty identified from the sentence",
+      "explanation": "a clear English explanation of how this phrase/grammar works, its meaning, or usage notes"
+    }
+  ]
 }
 
 Level guide:
@@ -113,7 +119,17 @@ Output:
       "level": 0
     }
   ],
-  "overallMeaning": "Keep your screen recordings private by not showing personal info, in order to comply with privacy laws, unless you are told to do so."
+  "overallMeaning": "Keep your screen recordings private by not showing personal info, in order to comply with privacy laws, unless you are told to do so.",
+  "collocationsAndDifficulties": [
+    {
+      "point": "unless instructed otherwise",
+      "explanation": "A common conditional pattern meaning 'except if you are told to do something different'. The subject and auxiliary verb 'you are' are omitted after 'unless' for conciseness."
+    },
+    {
+      "point": "avoid doing something",
+      "explanation": "A grammatical pattern where the verb 'avoid' is followed by a gerund (-ing form of a verb) to mean keeping away from or preventing something."
+    }
+  ]
 }`;
 
 const DEFAULT_SENTENCE_ANALYSIS_USER_PROMPT = `Sentence: {{sentence}}

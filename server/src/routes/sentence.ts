@@ -10,9 +10,15 @@ interface Chunk {
   level: number;
 }
 
+interface CollocationOrDifficulty {
+  point: string;
+  explanation: string;
+}
+
 interface AnalysisResult {
   chunks: Chunk[];
   overallMeaning: string;
+  collocationsAndDifficulties?: CollocationOrDifficulty[];
 }
 
 const router = Router();
