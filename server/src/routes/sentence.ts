@@ -66,16 +66,44 @@ router.post('/analyze', async (req, res) => {
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.3,
-      max_tokens: 1000,
+      max_tokens: 2000,
     };
 
-    const rawContent = await callLlmWithRetry({
-      apiUrl,
-      apiKey: modelConfig.api_key,
-      requestBody,
-    });
+    let parsed: AnalysisResult | null = null;
+    let attempts = 0;
+    const maxParseAttempts = 2;
 
-    const parsed = parseLlmResponse<AnalysisResult>(rawContent);
+    while (attempts < maxParseAttempts) {
+      attempts++;
+      try {
+        const rawContent = await callLlmWithRetry({
+          apiUrl,
+          apiKey: modelConfig.api_key,
+          requestBody,
+        });
+
+        parsed = parseLlmResponse<AnalysisResult>(rawContent);
+
+        // 校验结构业务完整性
+        if (!parsed.overallMeaning || !parsed.chunks || parsed.chunks.length === 0) {
+          throw new Error('Parsed result is incomplete (missing overallMeaning or chunks).');
+        }
+
+        break;
+      } catch (parseErr: any) {
+        console.warn(`⚠️ [Sentence Analysis Attempt ${attempts}/${maxParseAttempts} Failed]: ${parseErr.message}`);
+        if (attempts >= maxParseAttempts) {
+          if (parsed && parsed.chunks && parsed.chunks.length > 0) {
+            if (!parsed.overallMeaning) {
+              parsed.overallMeaning = "Analysis was partially completed. Please try analyzing again.";
+            }
+            break;
+          }
+          throw parseErr;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+    }
 
     res.json({
       sentence: sentence.trim(),

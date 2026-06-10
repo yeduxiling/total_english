@@ -99,7 +99,8 @@ export default function SentenceAnalysisPage() {
     }
   };
 
-  const getBadgeColorClass = (label: string): string => {
+  const getBadgeColorClass = (label: string | undefined): string => {
+    if (!label) return 'badge-secondary';
     const l = label.toLowerCase();
     if (l.includes('prohibition') || l.includes('negation') || l.includes('avoid')) return 'badge-danger';
     if (l.includes('core') || l.includes('action') || l.includes('subject')) return 'badge-primary';
@@ -181,11 +182,11 @@ export default function SentenceAnalysisPage() {
                   <div className="chunk-content">
                     <div className="chunk-top">
                       <span className={`chunk-badge ${getBadgeColorClass(chunk.label)}`}>
-                        {chunk.label}
+                        {chunk.label || 'ANALYSIS'}
                       </span>
-                      <strong className="chunk-text">{chunk.text}</strong>
+                      <strong className="chunk-text">{chunk.text || '(Incomplete chunk text)'}</strong>
                     </div>
-                    <p className="chunk-explanation">{chunk.explanation}</p>
+                    <p className="chunk-explanation">{chunk.explanation || '(No explanation provided)'}</p>
                   </div>
                 </div>
               ))}
@@ -195,7 +196,7 @@ export default function SentenceAnalysisPage() {
           <div className="result-card fade-in delay-1">
             <h2 className="result-card-title">2. Overall Meaning</h2>
             <blockquote className="overall-meaning-quote">
-              {analysisResult.analysis.overallMeaning}
+              {analysisResult.analysis.overallMeaning || 'No overall meaning could be parsed. Please try analyzing again.'}
             </blockquote>
           </div>
 
