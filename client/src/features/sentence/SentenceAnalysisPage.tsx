@@ -227,25 +227,28 @@ export default function SentenceAnalysisPage() {
           </div>
 
           <div className="result-card fade-in delay-3">
-            <h2 className="result-card-title">💾 Save to Collection</h2>
-            <div className="save-section">
-              {isSaved ? (
-                <div className="saved-badge">
-                  <span>✓ Sentence saved in Collection</span>
-                </div>
-              ) : (
-                <div className="save-form">
+            <div className="save-action-bar">
+              <div className="save-info">
+                <h3 className="save-info-title">Keep this sentence?</h3>
+                <p className="save-info-desc">Save it to review its chunking and collocations later.</p>
+              </div>
+              <div className="save-control">
+                {isSaved ? (
+                  <div className="saved-badge-new">
+                    <span>✓ Saved to Collection</span>
+                  </div>
+                ) : (
                   <button
-                    className="save-btn"
+                    className="save-btn-new"
                     onClick={handleSave}
                     disabled={saving}
                   >
                     {saving ? 'Saving...' : 'Add to Collection'}
                   </button>
-                </div>
-              )}
-              {saveSuccessMsg && <p className="success-message">{saveSuccessMsg}</p>}
+                )}
+              </div>
             </div>
+            {saveSuccessMsg && <p className="success-message-new">{saveSuccessMsg}</p>}
           </div>
         </div>
       )}

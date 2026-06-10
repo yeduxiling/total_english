@@ -319,87 +319,86 @@
   margin: 0;
 }
 
-/* 收藏表单 */
-.save-section {
+/* 收藏操作栏 (Save Action Bar) */
+.save-action-bar {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.save-form {
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
   gap: var(--space-4);
+  flex-wrap: wrap;
 }
 
-.note-input-wrapper {
+.save-info {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 4px;
 }
 
-.note-label {
-  font-size: var(--text-xs);
+.save-info-title {
+  font-size: var(--text-base);
   font-weight: var(--font-bold);
-  color: var(--color-text-secondary);
-}
-
-.note-textarea {
-  width: 100%;
-  min-height: 80px;
-  resize: vertical;
-  background: var(--color-bg-input);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-2-5) var(--space-3);
-  font-family: inherit;
-  font-size: var(--text-sm);
   color: var(--color-text-primary);
-  line-height: 1.5;
-  outline: none;
-  transition: all var(--transition-fast);
+  margin: 0;
 }
 
-.note-textarea:focus {
-  border-color: var(--color-accent);
-  background: var(--color-bg-primary);
+.save-info-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
-.save-btn {
-  align-self: flex-start;
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-accent);
-  color: var(--color-accent);
+.save-control {
+  flex-shrink: 0;
+}
+
+/* 高级保存按钮 */
+.save-btn-new {
+  background: linear-gradient(135deg, var(--color-accent), #4f46e5);
+  border: none;
+  color: #ffffff;
   border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-5);
+  padding: 10px 24px;
   font-size: var(--text-sm);
   font-weight: var(--font-bold);
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
   transition: all var(--transition-base);
+  white-space: nowrap;
 }
 
-.save-btn:hover {
-  background: var(--color-accent);
-  color: #ffffff;
+.save-btn-new:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.25);
+  opacity: 0.95;
 }
 
-.saved-badge {
+.save-btn-new:disabled {
+  background: var(--color-border);
+  color: var(--color-text-secondary);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 高级已收藏徽章 */
+.saved-badge-new {
   display: flex;
   align-items: center;
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.2);
   color: #059669;
-  padding: var(--space-2) var(--space-4);
+  padding: 10px 24px;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--font-bold);
-  width: fit-content;
+  white-space: nowrap;
 }
 
-.success-message {
+.success-message-new {
   font-size: var(--text-xs);
   color: #059669;
-  margin: 0;
+  margin-top: var(--space-3);
+  margin-bottom: 0;
 }
 
 /* 渐变载入动画 */
