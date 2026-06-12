@@ -220,26 +220,50 @@ export default function LookupPage() {
       <div className="lookup-form card">
         <div className="form-group">
           <label className="form-label" htmlFor="word-input">Word or Phrase</label>
-          <input
-            id="word-input"
-            className="input"
-            type="text"
-            placeholder="e.g. elaborate"
-            value={word}
-            onChange={e => setWord(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleLookup(); }}
-          />
+          <div className="input-wrapper">
+            <input
+              id="word-input"
+              className="input"
+              type="text"
+              placeholder="e.g. elaborate"
+              value={word}
+              onChange={e => setWord(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleLookup(); }}
+            />
+            {word && (
+              <button 
+                type="button"
+                className="clear-button"
+                onClick={() => setWord('')}
+                aria-label="Clear word"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="sentence-input">Sentence Context</label>
-          <textarea
-            id="sentence-input"
-            className="input textarea"
-            placeholder="e.g. She asked him to elaborate on his proposal."
-            rows={3}
-            value={sentence}
-            onChange={e => setSentence(e.target.value)}
-          />
+          <div className="input-wrapper">
+            <textarea
+              id="sentence-input"
+              className="input textarea"
+              placeholder="e.g. She asked him to elaborate on his proposal."
+              rows={3}
+              value={sentence}
+              onChange={e => setSentence(e.target.value)}
+            />
+            {sentence && (
+              <button 
+                type="button"
+                className="clear-button clear-button-textarea"
+                onClick={() => setSentence('')}
+                aria-label="Clear sentence"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
         <button
           className="btn btn-primary lookup-submit"

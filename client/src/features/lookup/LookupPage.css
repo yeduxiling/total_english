@@ -52,6 +52,48 @@
   line-height: 1.6;
 }
 
+/* --- Input wrapper & Clear button --- */
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.input-wrapper .input {
+  width: 100%;
+  padding-right: 36px;
+}
+
+.clear-button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary, #94a3b8);
+  font-size: 20px;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full, 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s);
+  padding: 0;
+}
+
+.clear-button:hover {
+  color: var(--color-text-primary, #1e293b);
+  background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.clear-button-textarea {
+  top: 12px;
+  transform: none;
+}
+
 .lookup-submit {
   align-self: flex-end;
   padding: var(--space-3) var(--space-8);
