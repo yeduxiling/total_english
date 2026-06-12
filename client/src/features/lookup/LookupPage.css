@@ -455,3 +455,138 @@
 }
 
 .lookup-hint strong { color: var(--color-accent); }
+
+/* ========== Mobile Responsive ========== */
+@media (max-width: 768px) {
+  .lookup-page {
+    gap: var(--space-4);
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .lookup-form {
+    padding: var(--space-4);
+  }
+
+  .lookup-submit {
+    width: 100%;
+    justify-content: center;
+    align-self: stretch;
+  }
+
+  .result-card {
+    border-radius: var(--radius-md);
+    max-width: 100%;
+  }
+
+  .result-status {
+    padding: var(--space-2-5) var(--space-4);
+  }
+
+  /* 垂直排布头部，解决星星和单词挤压撑爆的问题 */
+  .result-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-6) var(--space-4) var(--space-4);
+  }
+
+  .result-hero-left {
+    width: 100%;
+    gap: var(--space-2);
+  }
+
+  .result-word {
+    font-size: 1.8rem;
+    word-break: break-word;
+  }
+
+  /* 星星与说明文字移动到下方并左对齐，允许换行 */
+  .result-hero-right {
+    align-items: flex-start;
+    width: 100%;
+    gap: 4px;
+    flex-shrink: 1;
+  }
+
+  .result-stars {
+    gap: 3px;
+  }
+
+  .result-freq-note {
+    text-align: left;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* body 区域边距缩小 */
+  .result-body {
+    padding: 0 var(--space-4) var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .meaning-block {
+    padding: var(--space-4);
+  }
+
+  .block-meaning {
+    font-size: var(--text-base);
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
+  /* 翻滚按钮折叠 */
+  .reroll-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .reroll-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .reroll-nav {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  /* chip 允许换行防撑爆 */
+  .chip {
+    white-space: normal;
+    word-break: break-word;
+    text-align: left;
+    padding: 6px 12px;
+  }
+
+  /* footer 保存区垂直排版 */
+  .result-footer {
+    padding: var(--space-4);
+  }
+
+  .save-area {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+
+  .save-tags {
+    min-width: 100%;
+  }
+
+  .tag-input-wrap {
+    max-width: 100%;
+  }
+
+  .save-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .save-success {
+    justify-content: center;
+    width: 100%;
+  }
+}
