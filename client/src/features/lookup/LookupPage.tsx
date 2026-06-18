@@ -387,7 +387,7 @@ export default function LookupPage() {
                     <input
                       type="text"
                       className="input"
-                      placeholder="句子出处，如：哈利波特 (可选)"
+                      placeholder="Sentence Source"
                       value={sourceTag}
                       onChange={e => setSourceTag(e.target.value)}
                     />

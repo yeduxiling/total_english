@@ -227,7 +227,7 @@ function MeaningBlock({
                         type="text"
                         className="input"
                         style={{ padding: '4px 28px 4px 8px', fontSize: '12px', height: '28px' }}
-                        placeholder="出处，如：哈利波特"
+                        placeholder="Sentence Source"
                         value={editSourceText}
                         onChange={e => setEditSourceText(e.target.value)}
                       />

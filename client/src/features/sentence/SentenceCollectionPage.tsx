@@ -204,7 +204,7 @@ export default function SentenceCollectionPage() {
                 id="new-source-tag-input"
                 type="text"
                 className="input"
-                placeholder="例如: 哈利波特"
+                placeholder="Sentence Source"
                 value={newSourceTag}
                 onChange={(e) => setNewSourceTag(e.target.value)}
                 disabled={adding}
@@ -309,7 +309,7 @@ export default function SentenceCollectionPage() {
                           type="text"
                           className="input"
                           style={{ padding: '6px 28px 6px 10px', fontSize: '13px' }}
-                          placeholder="例如: 哈利波特"
+                          placeholder="Sentence Source"
                           value={editSourceTagText}
                           onChange={e => setEditSourceTagText(e.target.value)}
                           disabled={updatingId === item.id}
