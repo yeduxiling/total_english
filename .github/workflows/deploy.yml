@@ -55,6 +55,14 @@ jobs:
           script: |
             set -e  # 关键：一旦任何命令失败，立即中止并报错，防止虚假绿灯
             
+            # 0. 自动配置使用 443 端口 SSH 连接 github.com（防止 22 端口超时）
+            mkdir -p ~/.ssh
+            touch ~/.ssh/config
+            if ! grep -q "ssh.github.com" ~/.ssh/config; then
+              echo -e "\nHost github.com\n  Hostname ssh.github.com\n  Port 443\n  User git" >> ~/.ssh/config
+              chmod 600 ~/.ssh/config
+            fi
+            
             # 1. 强制进入服务器项目部署路径
             cd /root/deploy/total_english
             
