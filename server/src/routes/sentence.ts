@@ -142,7 +142,7 @@ router.get('/', (req, res) => {
 
 // 3. 收藏新句子
 router.post('/', (req, res) => {
-  const { sentence, source, analysisResult, note } = req.body;
+  const { sentence, source, analysisResult, note, sourceTag } = req.body;
 
   if (!sentence || sentence.trim() === '') {
     return res.status(400).json({ error: 'Sentence is required.' });
@@ -165,9 +165,10 @@ router.post('/', (req, res) => {
           SET source = ?,
               analysis_result = COALESCE(?, analysis_result),
               note = COALESCE(?, note),
+              source_tag = COALESCE(?, source_tag),
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(cleanSource, analysisResultStr, note || null, existing.id);
+        `).run(cleanSource, analysisResultStr, note || null, sourceTag || null, existing.id);
         
         const updated = db.prepare('SELECT * FROM sentences WHERE id = ?').get(existing.id) as any;
         return res.json({
@@ -182,9 +183,10 @@ router.post('/', (req, res) => {
               source = ?,
               analysis_result = ?,
               note = ?,
+              source_tag = ?,
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(cleanSource, analysisResultStr, note || null, existing.id);
+        `).run(cleanSource, analysisResultStr, note || null, sourceTag || null, existing.id);
 
         const updated = db.prepare('SELECT * FROM sentences WHERE id = ?').get(existing.id) as any;
         return res.status(201).json({
@@ -196,9 +198,9 @@ router.post('/', (req, res) => {
 
     // 插入新记录
     const info = db.prepare(`
-      INSERT INTO sentences (sentence, source, analysis_result, note, is_favorite)
-      VALUES (?, ?, ?, ?, 1)
-    `).run(cleanSentence, cleanSource, analysisResultStr, note || null);
+      INSERT INTO sentences (sentence, source, analysis_result, note, source_tag, is_favorite)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `).run(cleanSentence, cleanSource, analysisResultStr, note || null, sourceTag || null);
 
     const inserted = db.prepare('SELECT * FROM sentences WHERE id = ?').get(info.lastInsertRowid) as any;
     res.status(201).json({
@@ -211,10 +213,10 @@ router.post('/', (req, res) => {
   }
 });
 
-// 4. 更新收藏的句子
+// 4. 更新收藏 the sentence
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { note, analysisResult, sentence } = req.body;
+  const { note, analysisResult, sentence, sourceTag } = req.body;
 
   try {
     const db = getDb();
@@ -235,15 +237,17 @@ router.put('/:id', (req, res) => {
     }
 
     const newNote = note !== undefined ? note : existing.note;
+    const newSourceTag = sourceTag !== undefined ? sourceTag : existing.source_tag;
 
     db.prepare(`
       UPDATE sentences
       SET sentence = ?,
           note = ?,
           analysis_result = ?,
+          source_tag = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(newSentence, newNote, analysisResultStr, id);
+    `).run(newSentence, newNote, analysisResultStr, newSourceTag || null, id);
 
     const updated = db.prepare('SELECT * FROM sentences WHERE id = ?').get(id) as any;
     res.json({

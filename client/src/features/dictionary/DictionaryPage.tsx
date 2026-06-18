@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import TagAutocomplete from '../../components/TagAutocomplete.js';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import './DictionaryPage.css';
 
@@ -18,7 +17,6 @@ interface Meaning {
   frequency_rating: number;
   frequency_note: string;
   examples: Example[];
-  tags: string[];
 }
 
 interface WordEntry {
@@ -26,7 +24,6 @@ interface WordEntry {
   word: string;
   phonetic: string;
   part_of_speech: string;
-  tags: string[];
   meanings: Meaning[];
   created_at: string;
   updated_at: string;
@@ -41,20 +38,19 @@ interface MeaningVariant {
 function MeaningBlock({ 
   meaning, 
   wordEntry, 
-  onSelectVariant,
-  onAddTag,
-  onRemoveTag
+  onSelectVariant
 }: { 
   meaning: Meaning, 
   wordEntry: WordEntry, 
-  onSelectVariant: (meaningId: string, newMeaning: string) => void,
-  onAddTag: (meaningId: string, tagName: string) => void,
-  onRemoveTag: (meaningId: string, tagName: string) => void
+  onSelectVariant: (meaningId: string, newMeaning: string) => void
 }) {
   const [variants, setVariants] = useState<MeaningVariant[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRerolling, setIsRerolling] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
+  const [editSourceText, setEditSourceText] = useState('');
+  const [savingExampleId, setSavingExampleId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/words/meanings/${meaning.id}/variants`)
@@ -197,31 +193,94 @@ function MeaningBlock({
       {meaning.examples.length > 0 && (
         <div className="dict-examples">
           <span className="dict-chips-label">Examples</span>
-          {meaning.examples.map(ex => (
-            <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <p className="dict-example font-english" style={{ margin: 0 }}>"{ex.sentence}"</p>
-              <SpeakButton text={ex.sentence} size="sm" />
-            </div>
-          ))}
+          {meaning.examples.map(ex => {
+            const isEditing = editingExampleId === ex.id;
+            return (
+              <div key={ex.id} className="dict-example-row" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <p className={`dict-example font-english ${ex.source ? 'has-source-sentence' : ''}`} style={{ margin: 0 }}>
+                    {ex.source && <span className="source-tag-badge">📖 {ex.source}</span>}
+                    "{ex.sentence}"
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <SpeakButton text={ex.sentence} size="sm" />
+                    {!isEditing && (
+                      <button 
+                        className="btn-icon" 
+                        onClick={() => {
+                          setEditingExampleId(ex.id);
+                          setEditSourceText(ex.source || '');
+                        }}
+                        title="Edit sentence source"
+                        style={{ padding: '2px', fontSize: '12px' }}
+                      >
+                        ✏️
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {isEditing && (
+                  <div className="example-source-edit" style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px', marginTop: '4px' }}>
+                    <div className="input-wrapper" style={{ maxWidth: '200px' }}>
+                      <input
+                        type="text"
+                        className="input"
+                        style={{ padding: '4px 28px 4px 8px', fontSize: '12px', height: '28px' }}
+                        placeholder="出处，如：哈利波特"
+                        value={editSourceText}
+                        onChange={e => setEditSourceText(e.target.value)}
+                      />
+                      {editSourceText && (
+                        <button
+                          type="button"
+                          className="clear-button"
+                          onClick={() => setEditSourceText('')}
+                          style={{ right: '8px', fontSize: '14px', width: '16px', height: '16px' }}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                    <button 
+                      className="btn btn-primary btn-sm"
+                      style={{ height: '28px', padding: '0 8px', fontSize: '12px' }}
+                      disabled={savingExampleId === ex.id}
+                      onClick={async () => {
+                        setSavingExampleId(ex.id);
+                        try {
+                          const res = await fetch(`/api/words/examples/${ex.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ source: editSourceText.trim() })
+                          });
+                          if (res.ok) {
+                            ex.source = editSourceText.trim() || null;
+                            setEditingExampleId(null);
+                          }
+                        } catch (e) {
+                          console.error(e);
+                        } finally {
+                          setSavingExampleId(null);
+                        }
+                      }}
+                    >
+                      💾
+                    </button>
+                    <button 
+                      className="btn btn-secondary btn-sm"
+                      style={{ height: '28px', padding: '0 8px', fontSize: '12px' }}
+                      onClick={() => setEditingExampleId(null)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
-
-      <div className="dict-meaning-tags">
-        <span className="dict-chips-label" style={{ marginBottom: 0 }}>Tags:</span>
-        {meaning.tags.map(t => (
-          <span key={t} className="dict-chip-tag">
-            {t}
-            <button className="dict-chip-remove" onClick={() => onRemoveTag(meaning.id, t)}>×</button>
-          </span>
-        ))}
-        <div className="dict-tag-add-container">
-          <TagAutocomplete 
-            onAddTag={(tagName) => onAddTag(meaning.id, tagName)} 
-            existingTags={meaning.tags}
-            placeholder="+ Add Tag"
-          />
-        </div>
-      </div>
     </div>
   );
 }
@@ -270,57 +329,7 @@ export default function DictionaryPage() {
     }));
   };
 
-  const handleAddTag = async (wordId: number, meaningId: string, tagName: string) => {
-    try {
-      const res = await fetch(`/api/words/${wordId}/meanings/${meaningId}/tags`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tagName }),
-      });
-      if (res.ok) {
-        setWords(words.map(w => {
-          if (w.id === wordId) {
-            const newMeanings = w.meanings.map(m => {
-              if (m.id === meaningId && !m.tags.includes(tagName)) {
-                return { ...m, tags: [...m.tags, tagName] };
-              }
-              return m;
-            });
-            const newWordTags = Array.from(new Set(newMeanings.flatMap(m => m.tags)));
-            return { ...w, meanings: newMeanings, tags: newWordTags };
-          }
-          return w;
-        }));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
-  const handleRemoveTag = async (wordId: number, meaningId: string, tagName: string) => {
-    try {
-      const res = await fetch(`/api/words/${wordId}/meanings/${meaningId}/tags/${encodeURIComponent(tagName)}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        setWords(words.map(w => {
-          if (w.id === wordId) {
-            const newMeanings = w.meanings.map(m => {
-              if (m.id === meaningId) {
-                return { ...m, tags: m.tags.filter((t: string) => t !== tagName) };
-              }
-              return m;
-            });
-            const newWordTags = Array.from(new Set(newMeanings.flatMap(m => m.tags)));
-            return { ...w, meanings: newMeanings, tags: newWordTags };
-          }
-          return w;
-        }));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const filtered = words
     .filter(w => {
@@ -470,15 +479,6 @@ export default function DictionaryPage() {
                     <div className="dict-meanings-count">
                       {entry.meanings.length} {entry.meanings.length === 1 ? 'meaning' : 'meanings'}
                     </div>
-                    {entry.tags.length > 0 && (
-                      <div className="dict-tags-preview">
-                        {entry.tags.map(t => (
-                          <span key={t} className="dict-chip-mini">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                     <span className={`dict-expand-icon ${isExpanded ? 'open' : ''}`}>▸</span>
                   </div>
                 </div>
@@ -493,8 +493,6 @@ export default function DictionaryPage() {
                           meaning={meaning} 
                           wordEntry={entry} 
                           onSelectVariant={(mId, newM) => handleSelectVariant(entry.id, mId, newM)} 
-                          onAddTag={(mId, tagName) => handleAddTag(entry.id, mId, tagName)}
-                          onRemoveTag={(mId, tagName) => handleRemoveTag(entry.id, mId, tagName)}
                         />
                       </div>
                     ))}

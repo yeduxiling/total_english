@@ -9,6 +9,7 @@ interface SentenceItem {
   id: number;
   sentence: string;
   source: string; // 'analysis' | 'manual'
+  source_tag: string | null;
   analysis_result: unknown;
   note: string | null;
   created_at: string;
@@ -23,11 +24,13 @@ export default function SentenceCollectionPage() {
   // 新建句子表单状态
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSentence, setNewSentence] = useState('');
+  const [newSourceTag, setNewSourceTag] = useState('');
   const [adding, setAdding] = useState(false);
 
   // 编辑句子相关状态
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+  const [editSourceTagText, setEditSourceTagText] = useState('');
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
 
@@ -75,7 +78,8 @@ export default function SentenceCollectionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sentence: newSentence.trim(),
-          source: 'manual'
+          source: 'manual',
+          sourceTag: newSourceTag.trim() || null
         }),
       });
 
@@ -85,6 +89,7 @@ export default function SentenceCollectionPage() {
       }
 
       setNewSentence('');
+      setNewSourceTag('');
       setShowAddForm(false);
       fetchSentences();
     } catch (err: unknown) {
@@ -113,11 +118,13 @@ export default function SentenceCollectionPage() {
   const startEditing = (item: SentenceItem) => {
     setEditingId(item.id);
     setEditText(item.sentence);
+    setEditSourceTagText(item.source_tag || '');
   };
 
   const cancelEditing = () => {
     setEditingId(null);
     setEditText('');
+    setEditSourceTagText('');
   };
 
   const handleUpdateSentence = async (id: number) => {
@@ -127,7 +134,10 @@ export default function SentenceCollectionPage() {
       const res = await fetch(`/api/sentences/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sentence: editText.trim() }),
+        body: JSON.stringify({ 
+          sentence: editText.trim(),
+          sourceTag: editSourceTagText.trim() || null
+        }),
       });
 
       if (!res.ok) {
@@ -136,12 +146,18 @@ export default function SentenceCollectionPage() {
 
       setSentences(sentences.map(s => {
         if (s.id === id) {
-          return { ...s, sentence: editText.trim(), analysis_result: null };
+          return { 
+            ...s, 
+            sentence: editText.trim(), 
+            source_tag: editSourceTagText.trim() || null, 
+            analysis_result: null 
+          };
         }
         return s;
       }));
       setEditingId(null);
       setEditText('');
+      setEditSourceTagText('');
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : String(err));
     } finally {
@@ -180,6 +196,30 @@ export default function SentenceCollectionPage() {
               required
               disabled={adding}
             />
+          </div>
+          <div className="form-group" style={{ marginTop: '12px', marginBottom: '16px' }}>
+            <label htmlFor="new-source-tag-input" className="field-label">句子出处 (可选)</label>
+            <div className="input-wrapper" style={{ width: '100%' }}>
+              <input
+                id="new-source-tag-input"
+                type="text"
+                className="input"
+                placeholder="例如: 哈利波特"
+                value={newSourceTag}
+                onChange={(e) => setNewSourceTag(e.target.value)}
+                disabled={adding}
+              />
+              {newSourceTag && (
+                <button
+                  type="button"
+                  className="clear-button"
+                  onClick={() => setNewSourceTag('')}
+                  disabled={adding}
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
           <button className="submit-btn" type="submit" disabled={adding || !newSentence.trim()}>
             {adding ? 'Saving...' : 'Save Sentence'}
@@ -254,15 +294,44 @@ export default function SentenceCollectionPage() {
 
               <div className="card-sentence-body">
                 {editingId === item.id ? (
-                  <textarea
-                    className="edit-sentence-textarea"
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    disabled={updatingId === item.id}
-                    rows={4}
-                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <textarea
+                      className="edit-sentence-textarea"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      disabled={updatingId === item.id}
+                      rows={3}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label className="field-label" style={{ fontSize: '12px' }}>句子出处 (可选)</label>
+                      <div className="input-wrapper" style={{ maxWidth: '300px' }}>
+                        <input
+                          type="text"
+                          className="input"
+                          style={{ padding: '6px 28px 6px 10px', fontSize: '13px' }}
+                          placeholder="例如: 哈利波特"
+                          value={editSourceTagText}
+                          onChange={e => setEditSourceTagText(e.target.value)}
+                          disabled={updatingId === item.id}
+                        />
+                        {editSourceTagText && (
+                          <button
+                            type="button"
+                            className="clear-button"
+                            onClick={() => setEditSourceTagText('')}
+                            disabled={updatingId === item.id}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <p className="main-sentence-text">{item.sentence}</p>
+                  <p className={`main-sentence-text ${item.source_tag ? 'has-source-sentence' : ''}`}>
+                    {item.source_tag && <span className="source-tag-badge">📖 {item.source_tag}</span>}
+                    {item.sentence}
+                  </p>
                 )}
               </div>
 

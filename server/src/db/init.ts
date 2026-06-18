@@ -56,21 +56,9 @@ export function initDatabase(): void {
       FOREIGN KEY (meaning_id) REFERENCES meanings(id) ON DELETE CASCADE
     );
 
-    -- 标签表
-    CREATE TABLE IF NOT EXISTS tags (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
-    );
-
-    CREATE TABLE IF NOT EXISTS meaning_tags (
-      meaning_id TEXT NOT NULL,
-      tag_id INTEGER NOT NULL,
-      PRIMARY KEY (meaning_id, tag_id),
-      FOREIGN KEY (meaning_id) REFERENCES meanings(id) ON DELETE CASCADE,
-      FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-    );
-
     DROP TABLE IF EXISTS word_tags;
+    DROP TABLE IF EXISTS meaning_tags;
+    DROP TABLE IF EXISTS tags;
 
     -- 模型配置表
     CREATE TABLE IF NOT EXISTS model_configs (
@@ -151,6 +139,15 @@ export function initDatabase(): void {
     );
     CREATE INDEX IF NOT EXISTS idx_sentences_text ON sentences(sentence);
   `);
+
+  // 动态升级 sentences 表，添加 source_tag 字段
+  try {
+    db.exec('ALTER TABLE sentences ADD COLUMN source_tag TEXT;');
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column name')) {
+      throw e;
+    }
+  }
 
   // 插入种子数据
   seedDefaultPrompts(db);

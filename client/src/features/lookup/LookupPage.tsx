@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import TagAutocomplete from '../../components/TagAutocomplete.js';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import './LookupPage.css';
 
@@ -37,7 +36,7 @@ export default function LookupPage() {
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [tags, setTags] = useState<string[]>([]);
+  const [sourceTag, setSourceTag] = useState('');
 
   const handleLookup = async () => {
     if (!word.trim() || !sentence.trim()) return;
@@ -45,7 +44,7 @@ export default function LookupPage() {
     setError('');
     setResponse(null);
     setSaved(false);
-    setTags([]);
+    setSourceTag('');
 
     try {
       const res = await fetch('/api/lookup', {
@@ -65,12 +64,6 @@ export default function LookupPage() {
       setError((err as Error).message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAddTag = (tagName: string) => {
-    if (tagName && !tags.includes(tagName)) {
-      setTags([...tags, tagName]);
     }
   };
 
@@ -145,7 +138,7 @@ export default function LookupPage() {
         const res = await fetch(`/api/words/meanings/${result.matchedMeaningId}/examples`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sentence: sentence.trim(), tags }),
+          body: JSON.stringify({ sentence: sentence.trim(), source: sourceTag }),
         });
         if (!res.ok) {
           const err = await res.json();
@@ -164,7 +157,7 @@ export default function LookupPage() {
               frequencyNote: result.frequencyNote,
             },
             sentence: sentence.trim(),
-            tags,
+            source: sourceTag,
           }),
         });
         if (!res.ok) {
@@ -187,7 +180,7 @@ export default function LookupPage() {
               frequencyNote: result.frequencyNote,
             },
             sentence: sentence.trim(),
-            tags,
+            source: sourceTag,
           }),
         });
         if (!res.ok) {
@@ -390,22 +383,25 @@ export default function LookupPage() {
             {!saved ? (
               <div className="save-area">
                 <div className="save-tags">
-                  <div className="tag-input-wrap">
-                    <TagAutocomplete 
-                      onAddTag={handleAddTag} 
-                      existingTags={tags} 
+                  <div className="tag-input-wrap input-wrapper">
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="句子出处，如：哈利波特 (可选)"
+                      value={sourceTag}
+                      onChange={e => setSourceTag(e.target.value)}
                     />
+                    {sourceTag && (
+                      <button
+                        type="button"
+                        className="clear-button"
+                        onClick={() => setSourceTag('')}
+                        aria-label="Clear source tag"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
-                  {tags.length > 0 && (
-                    <div className="tag-list">
-                      {tags.map(t => (
-                        <span key={t} className="chip chip-tag">
-                          {t}
-                          <button className="chip-remove" onClick={() => setTags(tags.filter(x => x !== t))}>×</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 <button className="btn btn-primary save-btn" onClick={handleSave} disabled={saving}>
                   {saving ? 'Saving...' : '📖 Save to Dictionary'}
