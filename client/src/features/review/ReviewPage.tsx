@@ -188,7 +188,7 @@ function highlightChunk(sentence: string, word: string): React.ReactNode[] {
 
   const firstWordForms = getWordForms(words[0]);
   const escapedForms = firstWordForms.map(f => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const firstWordPattern = `(${escapedForms.join('|')})`;
+  const firstWordPattern = `(?:${escapedForms.join('|')})`;
 
   let pattern = firstWordPattern;
   for (let i = 1; i < words.length; i++) {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
+import SourceAutocomplete from '../../components/SourceAutocomplete.js';
 import './SentenceCollectionPage.css';
 
 
@@ -127,16 +128,17 @@ export default function SentenceCollectionPage() {
     setEditSourceTagText('');
   };
 
-  const handleUpdateSentence = async (id: number) => {
+  const handleUpdateSentence = async (id: number, overrideSourceTag?: string) => {
     if (!editText.trim()) return;
     setUpdatingId(id);
+    const finalSourceTag = overrideSourceTag !== undefined ? overrideSourceTag : editSourceTagText;
     try {
       const res = await fetch(`/api/sentences/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           sentence: editText.trim(),
-          sourceTag: editSourceTagText.trim() || null
+          sourceTag: finalSourceTag.trim() || null
         }),
       });
 
@@ -149,7 +151,7 @@ export default function SentenceCollectionPage() {
           return { 
             ...s, 
             sentence: editText.trim(), 
-            source_tag: editSourceTagText.trim() || null, 
+            source_tag: finalSourceTag.trim() || null, 
             analysis_result: null 
           };
         }
@@ -198,28 +200,14 @@ export default function SentenceCollectionPage() {
             />
           </div>
           <div className="form-group" style={{ marginTop: '12px', marginBottom: '16px' }}>
-            <label htmlFor="new-source-tag-input" className="field-label">句子出处 (可选)</label>
-            <div className="input-wrapper" style={{ width: '100%' }}>
-              <input
-                id="new-source-tag-input"
-                type="text"
-                className="input"
-                placeholder="Sentence Source"
-                value={newSourceTag}
-                onChange={(e) => setNewSourceTag(e.target.value)}
-                disabled={adding}
-              />
-              {newSourceTag && (
-                <button
-                  type="button"
-                  className="clear-button"
-                  onClick={() => setNewSourceTag('')}
-                  disabled={adding}
-                >
-                  ×
-                </button>
-              )}
-            </div>
+            <label className="field-label">Sentence Source</label>
+            <SourceAutocomplete
+              value={newSourceTag}
+              onChange={setNewSourceTag}
+              onSave={() => {}}
+              placeholder="Sentence Source"
+              disabled={adding}
+            />
           </div>
           <button className="submit-btn" type="submit" disabled={adding || !newSentence.trim()}>
             {adding ? 'Saving...' : 'Save Sentence'}
@@ -303,35 +291,27 @@ export default function SentenceCollectionPage() {
                       rows={3}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label className="field-label" style={{ fontSize: '12px' }}>句子出处 (可选)</label>
-                      <div className="input-wrapper" style={{ maxWidth: '300px' }}>
-                        <input
-                          type="text"
-                          className="input"
-                          style={{ padding: '6px 28px 6px 10px', fontSize: '13px' }}
-                          placeholder="Sentence Source"
-                          value={editSourceTagText}
-                          onChange={e => setEditSourceTagText(e.target.value)}
-                          disabled={updatingId === item.id}
-                        />
-                        {editSourceTagText && (
-                          <button
-                            type="button"
-                            className="clear-button"
-                            onClick={() => setEditSourceTagText('')}
-                            disabled={updatingId === item.id}
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
+                      <label className="field-label" style={{ fontSize: '12px' }}>Sentence Source</label>
+                      <SourceAutocomplete
+                        value={editSourceTagText}
+                        onChange={setEditSourceTagText}
+                        onSave={(val) => handleUpdateSentence(item.id, val || editSourceTagText)}
+                        placeholder="Sentence Source"
+                        disabled={updatingId === item.id}
+                      />
                     </div>
                   </div>
                 ) : (
-                  <p className={`main-sentence-text ${item.source_tag ? 'has-source-sentence' : ''}`}>
-                    {item.source_tag && <span className="source-tag-badge">📖 {item.source_tag}</span>}
-                    {item.sentence}
-                  </p>
+                  <div className="sentence-display-container">
+                    <p className={`main-sentence-text ${item.source_tag ? 'has-source-sentence' : ''}`} style={{ margin: 0 }}>
+                      {item.sentence}
+                    </p>
+                    {item.source_tag && (
+                      <div className="sentence-source-row" style={{ marginTop: '8px' }}>
+                        <span className="source-tag-badge">{item.source_tag}</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

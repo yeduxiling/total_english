@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
+import SourceAutocomplete from '../../components/SourceAutocomplete.js';
 import './DictionaryPage.css';
 
 interface Example {
@@ -195,87 +196,66 @@ function MeaningBlock({
           <span className="dict-chips-label">Examples</span>
           {meaning.examples.map(ex => {
             const isEditing = editingExampleId === ex.id;
+            
+            const handleSaveSource = async (text: string) => {
+              if (savingExampleId === ex.id) return;
+              const finalVal = text.trim();
+              if (finalVal === (ex.source || '')) {
+                setEditingExampleId(null);
+                return;
+              }
+              setSavingExampleId(ex.id);
+              try {
+                const res = await fetch(`/api/words/examples/${ex.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ source: finalVal })
+                });
+                if (res.ok) {
+                  ex.source = finalVal || null;
+                }
+              } catch (e) {
+                console.error(e);
+              } finally {
+                setSavingExampleId(null);
+                setEditingExampleId(null);
+              }
+            };
+
             return (
               <div key={ex.id} className="dict-example-row" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <p className={`dict-example font-english ${ex.source ? 'has-source-sentence' : ''}`} style={{ margin: 0 }}>
-                    {ex.source && <span className="source-tag-badge">📖 {ex.source}</span>}
-                    "{ex.sentence}"
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <SpeakButton text={ex.sentence} size="sm" />
-                    {!isEditing && (
-                      <button 
-                        className="btn-icon" 
-                        onClick={() => {
-                          setEditingExampleId(ex.id);
-                          setEditSourceText(ex.source || '');
-                        }}
-                        title="Edit sentence source"
-                        style={{ padding: '2px', fontSize: '12px' }}
-                      >
-                        ✏️
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {isEditing && (
-                  <div className="example-source-edit" style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px', marginTop: '4px' }}>
-                    <div className="input-wrapper" style={{ maxWidth: '200px' }}>
-                      <input
-                        type="text"
-                        className="input"
-                        style={{ padding: '4px 28px 4px 8px', fontSize: '12px', height: '28px' }}
-                        placeholder="Sentence Source"
-                        value={editSourceText}
-                        onChange={e => setEditSourceText(e.target.value)}
-                      />
-                      {editSourceText && (
-                        <button
-                          type="button"
-                          className="clear-button"
-                          onClick={() => setEditSourceText('')}
-                          style={{ right: '8px', fontSize: '14px', width: '16px', height: '16px' }}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+                  <div className="dict-example-container">
+                    <p className={`dict-example ${ex.source ? 'has-source-sentence' : ''}`} style={{ margin: 0 }}>
+                      {ex.sentence}
+                    </p>
+                    <div className="dict-example-source-row">
+                      {!isEditing ? (
+                        <span 
+                          className="source-tag-badge clickable-tag" 
+                          onClick={() => {
+                            setEditingExampleId(ex.id);
+                            setEditSourceText(ex.source || '');
+                          }}
+                          title="Click to edit source"
+                          style={{ cursor: 'pointer' }}
                         >
-                          ×
-                        </button>
+                          {ex.source || '+ Add Source'}
+                        </span>
+                      ) : (
+                        <SourceAutocomplete
+                          value={editSourceText}
+                          onChange={setEditSourceText}
+                          onSave={(val) => handleSaveSource(val || editSourceText)}
+                          placeholder="Sentence Source"
+                          className="dict-source-autocomplete"
+                          disabled={savingExampleId === ex.id}
+                        />
                       )}
                     </div>
-                    <button 
-                      className="btn btn-primary btn-sm"
-                      style={{ height: '28px', padding: '0 8px', fontSize: '12px' }}
-                      disabled={savingExampleId === ex.id}
-                      onClick={async () => {
-                        setSavingExampleId(ex.id);
-                        try {
-                          const res = await fetch(`/api/words/examples/${ex.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ source: editSourceText.trim() })
-                          });
-                          if (res.ok) {
-                            ex.source = editSourceText.trim() || null;
-                            setEditingExampleId(null);
-                          }
-                        } catch (e) {
-                          console.error(e);
-                        } finally {
-                          setSavingExampleId(null);
-                        }
-                      }}
-                    >
-                      💾
-                    </button>
-                    <button 
-                      className="btn btn-secondary btn-sm"
-                      style={{ height: '28px', padding: '0 8px', fontSize: '12px' }}
-                      onClick={() => setEditingExampleId(null)}
-                    >
-                      ✕
-                    </button>
                   </div>
-                )}
+                  <SpeakButton text={ex.sentence} size="sm" />
+                </div>
               </div>
             );
           })}

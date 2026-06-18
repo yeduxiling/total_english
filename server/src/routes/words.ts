@@ -41,6 +41,40 @@ router.get('/', (_req, res) => {
   res.json(result);
 });
 
+// GET /api/words/sources - 获取所有句子和例句的来源标签列表（频次降序）
+router.get('/sources', (req, res) => {
+  const db = getDb();
+  try {
+    const exampleSources = db.prepare(`
+      SELECT source as name, COUNT(*) as count 
+      FROM examples 
+      WHERE source IS NOT NULL AND source != '' 
+      GROUP BY source
+    `).all() as any[];
+
+    const sentenceSources = db.prepare(`
+      SELECT source_tag as name, COUNT(*) as count 
+      FROM sentences 
+      WHERE source_tag IS NOT NULL AND source_tag != '' 
+      GROUP BY source_tag
+    `).all() as any[];
+
+    const counts: Record<string, number> = {};
+    [...exampleSources, ...sentenceSources].forEach(item => {
+      counts[item.name] = (counts[item.name] || 0) + item.count;
+    });
+
+    const sortedSources = Object.keys(counts)
+      .map(name => ({ name, count: counts[name] }))
+      .sort((a, b) => b.count - a.count)
+      .map(item => item.name);
+
+    res.json(sortedSources);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/words/search?word=xxx - 按单词搜索
 router.get('/search', (req, res) => {
   const { word } = req.query;

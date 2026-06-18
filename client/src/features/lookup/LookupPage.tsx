@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
+import SourceAutocomplete from '../../components/SourceAutocomplete.js';
 import './LookupPage.css';
 
 interface LookupResult {
@@ -37,6 +38,7 @@ export default function LookupPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [sourceTag, setSourceTag] = useState('');
+  const [isEditingSource, setIsEditingSource] = useState(true);
 
   const handleLookup = async () => {
     if (!word.trim() || !sentence.trim()) return;
@@ -45,6 +47,7 @@ export default function LookupPage() {
     setResponse(null);
     setSaved(false);
     setSourceTag('');
+    setIsEditingSource(true);
 
     try {
       const res = await fetch('/api/lookup', {
@@ -371,48 +374,66 @@ export default function LookupPage() {
             {/* Example sentence */}
             <div className="result-block">
               <div className="block-label">Example Sentence</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <p className="block-example font-english" style={{ margin: 0 }}>"{sentence}"</p>
-                <SpeakButton text={sentence} size="sm" />
-              </div>
-            </div>
-          </div>
-
-          {/* Save */}
-          <div className="result-footer">
-            {!saved ? (
-              <div className="save-area">
-                <div className="save-tags">
-                  <div className="tag-input-wrap input-wrapper">
-                    <input
-                      type="text"
-                      className="input"
-                      placeholder="Sentence Source"
-                      value={sourceTag}
-                      onChange={e => setSourceTag(e.target.value)}
-                    />
-                    {sourceTag && (
-                      <button
-                        type="button"
-                        className="clear-button"
-                        onClick={() => setSourceTag('')}
-                        aria-label="Clear source tag"
-                      >
-                        ×
-                      </button>
+              <div className="block-example-container">
+                <div className="block-example-text-row">
+                  <p className="block-example">{sentence}</p>
+                  <SpeakButton text={sentence} size="sm" />
+                </div>
+                
+                {/* 来源标签移到此处，并保持失焦/回车保存交互 */}
+                {!saved ? (
+                  <div className="block-example-source-row">
+                    {(!sourceTag || isEditingSource) ? (
+                      <div className="tag-input-wrap">
+                        <SourceAutocomplete
+                          value={sourceTag}
+                          onChange={setSourceTag}
+                          onSave={(val) => {
+                            const finalVal = val !== undefined ? val : sourceTag;
+                            setSourceTag(finalVal);
+                            setIsEditingSource(false);
+                          }}
+                          placeholder="Sentence Source"
+                        />
+                      </div>
+                    ) : (
+                      <div className="lookup-source-tag-display">
+                        <span 
+                          className="source-tag-badge clickable-tag" 
+                          onClick={() => setIsEditingSource(true)}
+                          title="Click to edit source"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {sourceTag || '+ Add Source'}
+                        </span>
+                      </div>
                     )}
                   </div>
-                </div>
+                ) : (
+                  sourceTag && (
+                    <div className="block-example-source-row">
+                      <div className="lookup-source-tag-display">
+                        <span className="source-tag-badge">{sourceTag}</span>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Save Section */}
+            <div className="result-save-section" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+              {!saved ? (
                 <button className="btn btn-primary save-btn" onClick={handleSave} disabled={saving}>
                   {saving ? 'Saving...' : '📖 Save to Dictionary'}
                 </button>
-              </div>
-            ) : (
-              <div className="save-success">
-                <span className="save-success-icon">✅</span>
-                <span>Saved to dictionary!</span>
-              </div>
-            )}
+              ) : (
+                <div className="save-success">
+                  <span className="save-success-icon">✅</span>
+                  <span>Saved to dictionary!</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Debug */}
