@@ -45,6 +45,20 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Sync Code to Server via Rsync
+        run: |
+          echo "${{ secrets.SERVER_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          rsync -avz -e "ssh -i private_key.pem -p 22 -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='server/data/' \
+            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/root/deploy/total_english/
+          rm -f private_key.pem
+
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -55,22 +69,11 @@ jobs:
           script: |
             set -e  # 关键：一旦任何命令失败，立即中止并报错，防止虚假绿灯
             
-            # 0. 自动配置使用 443 端口 SSH 连接 github.com（防止 22 端口超时）
-            mkdir -p ~/.ssh
-            touch ~/.ssh/config
-            if ! grep -q "ssh.github.com" ~/.ssh/config; then
-              echo -e "\nHost github.com\n  Hostname ssh.github.com\n  Port 443\n  User git" >> ~/.ssh/config
-              chmod 600 ~/.ssh/config
-            fi
-            
             # 1. 强制进入服务器项目部署路径
             cd /root/deploy/total_english
             
-            # 2. 拉取 GitHub main 分支的最新代码
-            git pull origin main
-            
-            # 3. 一键编译、构建并平滑启动生产容器 (后台模式)
+            # 2. 一键编译、构建并平滑启动生产容器 (后台模式)
             docker compose -f docker-compose.prod.yml up --build -d
             
-            # 4. 清理无用的悬空 Docker 镜像，释放服务器磁盘空间
+            # 3. 清理无用的悬空 Docker 镜像，释放服务器磁盘空间
             docker image prune -f
