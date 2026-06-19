@@ -37,8 +37,7 @@ You MUST analyze the request and output strictly in the following JSON format wi
       "chinese": "Chinese translation of the expression",
       "style": "Formal / Informal / Idiomatic / Business",
       "explanation": "Briefly explain when to use this expression and why it fits perfectly.",
-      "exampleSentence": "a natural example sentence in context",
-      "exampleTranslation": "Chinese translation of the example sentence"
+      "exampleSentence": "a natural example sentence in context"
     }
   ],
   "alternativeExpressions": [

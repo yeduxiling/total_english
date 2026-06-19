@@ -14,7 +14,6 @@ interface BestExpression {
   style: string;
   explanation: string;
   exampleSentence: string;
-  exampleTranslation: string;
 }
 
 interface AlternativeExpression {
@@ -98,12 +97,12 @@ export default function ExpressPage() {
         <form className="express-form-card card" onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="field-label" htmlFor="express-input">
-              I want to express * <span className="label-lang-note">(中文或英文)</span>
+              I want to express * <span className="label-lang-note">(Chinese or English)</span>
             </label>
             <textarea
               id="express-input"
               className="express-textarea"
-              placeholder="e.g. 描述产品开发初期发现的问题越少，后期需要付出的代价就越小；或者用英语简单写: find bugs early, pay less later..."
+              placeholder="e.g. Describe the concept of 'finding bugs early to reduce future costs', or write in simple English: 'find bugs early, pay less later'..."
               value={expression}
               onChange={(e) => setExpression(e.target.value)}
               required
@@ -114,7 +113,7 @@ export default function ExpressPage() {
 
           <div className="form-group">
             <label className="field-label" htmlFor="assumption-input">
-              My assumption <span className="label-lang-note">(选填, 英文)</span>
+              My assumption <span className="label-lang-note">(Optional, English)</span>
             </label>
             <input
               id="assumption-input"
@@ -201,7 +200,6 @@ export default function ExpressPage() {
                           <span className="example-text font-english">{item.exampleSentence}</span>
                           <SpeakButton text={item.exampleSentence} size="sm" />
                         </div>
-                        <div className="example-translation">{item.exampleTranslation}</div>
                       </div>
                     </div>
                   ))}
