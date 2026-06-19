@@ -118,6 +118,10 @@ export default function PhoneticPage() {
     }
   };
 
+  const cleanPhonetic = (ph: string) => {
+    return ph.trim().replace(/^[\[\/]/, '').replace(/[\]\/]$/, '');
+  };
+
   return (
     <div className="phonetic-page animate-in">
       <div className="phonetic-header">
@@ -151,7 +155,7 @@ export default function PhoneticPage() {
               {resultPhonetic && resultPhonetic !== 'N/A' && (
                 <span className="result-phonetic">
                   <span className="slash">[</span>
-                  <span className="symbol-text">{resultPhonetic}</span>
+                  <span className="symbol-text">{cleanPhonetic(resultPhonetic)}</span>
                   <span className="slash">]</span>
                 </span>
               )}
