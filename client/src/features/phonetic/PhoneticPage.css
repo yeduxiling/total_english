@@ -183,3 +183,45 @@
 .animate-in {
   animation: cardFadeIn 0.3s ease-out forwards;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 576px) {
+  .phonetic-page {
+    gap: var(--space-4);
+  }
+  
+  .phonetic-tabs-container {
+    margin-bottom: var(--space-3);
+  }
+  
+  .phonetic-tab-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    gap: 6px;
+  }
+  
+  .consonants-tip {
+    font-size: var(--text-xs);
+    padding: var(--space-2) var(--space-3);
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .phonetic-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-3);
+  }
+  
+  .phonetic-card.card {
+    padding: var(--space-3) var(--space-4);
+  }
+  
+  .phonetic-symbol-kk {
+    font-size: 1.4rem;
+  }
+  
+  .phonetic-sample-word.font-english {
+    font-size: 0.95rem;
+  }
+}
+
