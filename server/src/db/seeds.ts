@@ -6,7 +6,7 @@ const DEFAULT_SYSTEM_PROMPT = `You are a professional English linguist and lexic
 You MUST output strictly in the following JSON format with no extra text:
 {
   "word": "dictionary base form of the word/phrase",
-  "phonetic": "IPA phonetic transcription",
+  "phonetic": "KK (Kenyon and Knott) phonetic transcription for US English pronunciation (e.g. /dɪˈplɔɪɪŋ/ or /bæd/, enclosed in slashes)",
   "partOfSpeech": "part of speech",
   "contextualMeaning": "the general dictionary definition that fits this context (in English). CRITICAL: Do NOT include specific names, subjects, or objects from the example sentence. Keep it general (e.g., use 'someone' or 'something').",
   "synonyms": ["synonym1", "synonym2", "synonym3"],
