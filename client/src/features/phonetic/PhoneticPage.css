@@ -1,0 +1,181 @@
+.phonetic-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Header styling */
+.phonetic-header {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-4);
+}
+
+/* Tabs switcher styling */
+.phonetic-tabs-container {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: var(--space-2);
+}
+
+.phonetic-tabs {
+  display: flex;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.phonetic-tab-btn {
+  background: transparent;
+  border: none;
+  padding: var(--space-2-5) var(--space-5);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold, 600);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phonetic-tab-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.02));
+}
+
+.phonetic-tab-btn.active {
+  background: var(--color-accent);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.tab-count {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.phonetic-tab-btn.active .tab-count {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Grids layout */
+.phonetic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Phonetic card glassmorphic styling */
+.phonetic-card.card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+}
+
+.phonetic-card.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-accent-light);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.06), 0 2px 8px rgba(0, 0, 0, 0.01);
+}
+
+.phonetic-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* KK Symbol Text */
+.phonetic-symbol-kk {
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.phonetic-symbol-kk .slash {
+  color: var(--color-text-tertiary);
+  opacity: 0.5;
+  font-weight: 300;
+}
+
+.phonetic-symbol-kk .symbol-text {
+  padding: 0 2px;
+}
+
+/* IPA Contrast Badge */
+.phonetic-symbol-ipa {
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.phonetic-symbol-ipa .ipa-label {
+  color: var(--color-text-tertiary);
+}
+
+.phonetic-symbol-ipa .ipa-value {
+  color: var(--color-accent);
+  font-weight: var(--font-semibold, 600);
+}
+
+.phonetic-symbol-ipa .ipa-same {
+  color: var(--color-text-tertiary);
+  opacity: 0.6;
+  font-style: italic;
+  font-size: 0.7rem;
+}
+
+/* Right side content */
+.phonetic-card-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.phonetic-sample-word.font-english {
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.phonetic-speak-action {
+  display: flex;
+  align-items: center;
+}
+
+/* Animation inside Layout container */
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: cardFadeIn 0.3s ease-out forwards;
+}

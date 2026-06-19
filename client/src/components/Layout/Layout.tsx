@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
     ]
   },
   { path: '/review', icon: '🧠', label: 'Review' },
+  { path: '/phonetic', icon: '🗣️', label: 'Phonetic' },
   { path: '/settings', icon: '⚙️', label: 'Settings' },
 ];
 
