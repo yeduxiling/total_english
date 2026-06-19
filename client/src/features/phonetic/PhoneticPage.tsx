@@ -90,16 +90,22 @@ export default function PhoneticPage() {
             className={`phonetic-tab-btn ${activeTab === 'vowels' ? 'active' : ''}`}
             onClick={() => setActiveTab('vowels')}
           >
-            Vowels (元音) <span className="tab-count">{vowels.length}</span>
+            Vowels
           </button>
           <button
             className={`phonetic-tab-btn ${activeTab === 'consonants' ? 'active' : ''}`}
             onClick={() => setActiveTab('consonants')}
           >
-            Consonants (辅音) <span className="tab-count">{consonants.length}</span>
+            Consonants
           </button>
         </div>
       </div>
+
+      {activeTab === 'consonants' && (
+        <div className="consonants-tip animate-in">
+          💡 All KK Phonetic Consonants same as IPA
+        </div>
+      )}
 
       <div className="phonetic-grid">
         {items.map((item, index) => (
@@ -120,9 +126,9 @@ export default function PhoneticPage() {
                     <span className="ipa-label">IPA:</span>
                     <span className="ipa-value">/{item.ipa}/</span>
                   </>
-                ) : (
+                ) : activeTab === 'vowels' ? (
                   <span className="ipa-same">Same as IPA</span>
-                )}
+                ) : null}
               </div>
             </div>
 
