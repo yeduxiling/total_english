@@ -26,7 +26,9 @@ const vowels: PhoneticItem[] = [
   { kk: 'aɪ', ipa: '', word: 'my' },
   { kk: 'aʊ', ipa: '', word: 'now' },
   { kk: 'ɔɪ', ipa: '', word: 'boy' },
-  { kk: 'ɪr', ipa: 'ɪər', word: 'near' },
+  { kk: 'ɑr', ipa: 'ɑːr', word: 'hard' },
+  { kk: 'ʊr (ur)', ipa: 'ʊər', word: 'your' },
+  { kk: 'ɪr (ɪə)', ipa: 'ɪər', word: 'real' },
   { kk: 'ɛr', ipa: 'eər', word: 'hair' },
   { kk: 'ɔr', ipa: 'ɔːr', word: 'door' }
 ];
