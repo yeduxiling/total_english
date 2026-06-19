@@ -72,8 +72,51 @@ const consonants: PhoneticItem[] = [
 
 export default function PhoneticPage() {
   const [activeTab, setActiveTab] = useState<'vowels' | 'consonants'>('vowels');
+  const [queryWord, setQueryWord] = useState('');
+  const [searchedWord, setSearchedWord] = useState('');
+  const [resultPhonetic, setResultPhonetic] = useState<string | null>(null);
+  const [queryLoading, setQueryLoading] = useState(false);
 
   const items = activeTab === 'vowels' ? vowels : consonants;
+
+  const handleQuerySpeak = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!queryWord.trim()) return;
+
+    const targetWord = queryWord.trim();
+    setQueryLoading(true);
+    setResultPhonetic(null);
+    setSearchedWord(targetWord);
+
+    // 立即触发 TTS 美音发音
+    try {
+      const audioUrl = `/api/tts/preview?text=${encodeURIComponent(targetWord)}`;
+      const audio = new Audio(audioUrl);
+      audio.play().catch((err) => console.warn('Audio auto-play blocked or failed:', err));
+    } catch (err) {
+      console.error('Audio setup failed:', err);
+    }
+
+    // 后端接口查音标
+    try {
+      const res = await fetch(`/api/words/phonetic?word=${encodeURIComponent(targetWord)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.phonetic) {
+          setResultPhonetic(data.phonetic);
+        } else {
+          setResultPhonetic('N/A');
+        }
+      } else {
+        setResultPhonetic('N/A');
+      }
+    } catch (err) {
+      console.error(err);
+      setResultPhonetic('N/A');
+    } finally {
+      setQueryLoading(false);
+    }
+  };
 
   return (
     <div className="phonetic-page animate-in">
@@ -82,6 +125,45 @@ export default function PhoneticPage() {
           <h1 className="page-title">Phonetic Chart</h1>
           <p className="page-subtitle">Learn the 48 KK Phonetic symbols for American English pronunciation.</p>
         </div>
+      </div>
+
+      {/* 单词读音与音标查询 */}
+      <div className="phonetic-search-container card">
+        <form onSubmit={handleQuerySpeak} className="phonetic-search-form">
+          <input
+            type="text"
+            className="phonetic-search-input font-english"
+            placeholder="Enter an English word to query and speak (e.g. elegant)..."
+            value={queryWord}
+            onChange={(e) => setQueryWord(e.target.value)}
+            disabled={queryLoading}
+            required
+          />
+          <button type="submit" className="phonetic-search-btn" disabled={queryLoading || !queryWord.trim()}>
+            {queryLoading ? 'Searching...' : 'Speak & Query'}
+          </button>
+        </form>
+
+        {searchedWord && (
+          <div className="phonetic-search-result fade-in">
+            <div className="result-word-info">
+              <span className="result-word font-english">{searchedWord}</span>
+              {resultPhonetic && resultPhonetic !== 'N/A' && (
+                <span className="result-phonetic">
+                  <span className="slash">[</span>
+                  <span className="symbol-text">{resultPhonetic}</span>
+                  <span className="slash">]</span>
+                </span>
+              )}
+              {resultPhonetic === 'N/A' && (
+                <span className="result-phonetic-notfound">No phonetic found</span>
+              )}
+            </div>
+            <div className="result-speak-action">
+              <SpeakButton text={searchedWord} size="md" />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="phonetic-tabs-container">

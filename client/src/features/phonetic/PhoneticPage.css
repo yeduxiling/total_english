@@ -10,6 +10,106 @@
   padding-bottom: var(--space-4);
 }
 
+/* Lookup phonetic search styling */
+.phonetic-search-container.card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.phonetic-search-form {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.phonetic-search-input {
+  flex: 1;
+  padding: 10px var(--space-3);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: var(--text-sm);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.phonetic-search-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+}
+
+.phonetic-search-btn {
+  background: linear-gradient(135deg, var(--color-accent), #4f46e5);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold, 700);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+  white-space: nowrap;
+}
+
+.phonetic-search-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.2);
+}
+
+.phonetic-search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.phonetic-search-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed var(--color-border);
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.result-word-info {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.result-word {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.result-phonetic {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.result-phonetic-notfound {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.result-speak-action {
+  display: flex;
+  align-items: center;
+}
+
 /* Tabs switcher styling */
 .phonetic-tabs-container {
   display: flex;
@@ -188,6 +288,27 @@
 @media (max-width: 576px) {
   .phonetic-page {
     gap: var(--space-4);
+  }
+
+  .phonetic-search-container.card {
+    padding: var(--space-4);
+  }
+  
+  .phonetic-search-form {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .phonetic-search-btn {
+    width: 100%;
+  }
+
+  .result-word {
+    font-size: 1.1rem;
+  }
+
+  .result-phonetic {
+    font-size: 1.0rem;
   }
   
   .phonetic-tabs-container {

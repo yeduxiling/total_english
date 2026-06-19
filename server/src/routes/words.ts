@@ -75,6 +75,72 @@ router.get('/sources', (req, res) => {
   }
 });
 
+// GET /api/words/phonetic?word=xxx - 查询单个单词的音标
+router.get('/phonetic', async (req, res) => {
+  const { word } = req.query;
+  if (!word || typeof word !== 'string' || word.trim() === '') {
+    return res.status(400).json({ error: '缺少 word 参数' });
+  }
+
+  const cleanWord = word.trim();
+  const db = getDb();
+  
+  // 1. 先从数据库查
+  try {
+    const wordEntry = db.prepare('SELECT phonetic FROM words WHERE word = ? COLLATE NOCASE LIMIT 1').get(cleanWord) as any;
+    if (wordEntry && wordEntry.phonetic) {
+      return res.json({ word: cleanWord, phonetic: wordEntry.phonetic });
+    }
+  } catch (dbErr: any) {
+    console.warn('⚠️ SQLite phonetic query failed:', dbErr.message);
+  }
+
+  // 2. 如果数据库没有，调用大模型查询
+  const modelConfig = db.prepare('SELECT * FROM model_configs WHERE is_active = 1').get() as any;
+  if (!modelConfig) {
+    return res.json({ word: cleanWord, phonetic: null });
+  }
+
+  const systemPrompt = `You are a helpful linguistic assistant. Provide the KK phonetic symbol for the given English word.
+You MUST output strictly a JSON object with no markdown formatting and no extra text, matching this structure:
+{
+  "phonetic": "the KK phonetic symbol only, e.g. [æpl] or [dɪˈlɪʃəs] without external quotes"
+}`;
+
+  const userPrompt = `Word: "${cleanWord}"
+Please output the KK phonetic symbol.`;
+
+  const apiUrl = `${modelConfig.base_url.replace(/\/$/, '')}/chat/completions`;
+  const requestBody = {
+    model: modelConfig.model_id,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.1,
+    max_tokens: 1000,
+  };
+
+  try {
+    const { callLlmWithRetry } = await import('../utils/llm.js');
+    const { parseLlmResponse } = await import('../utils/json.js');
+    
+    const rawContent = await callLlmWithRetry({
+      apiUrl,
+      apiKey: modelConfig.api_key,
+      requestBody,
+    });
+
+    const parsed = parseLlmResponse(rawContent) as any;
+    const phonetic = parsed && parsed.phonetic ? parsed.phonetic : null;
+
+    res.json({ word: cleanWord, phonetic });
+  } catch (err: any) {
+    console.error('⚠️ Get phonetic from LLM failed:', err.message);
+    res.json({ word: cleanWord, phonetic: null });
+  }
+});
+
 // GET /api/words/search?word=xxx - 按单词搜索
 router.get('/search', (req, res) => {
   const { word } = req.query;
