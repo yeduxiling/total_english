@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
+import { safeFetchJson } from '../../utils/api.js';
 import './SentenceAnalysisPage.css';
 
 interface Chunk {
@@ -54,18 +55,12 @@ export default function SentenceAnalysisPage() {
     setSaveSuccessMsg('');
 
     try {
-      const res = await fetch('/api/sentences/analyze', {
+      const data = await safeFetchJson<AnalysisResponse>('/api/sentences/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sentence: targetText.trim() }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Analysis failed');
-      }
-
-      const data: AnalysisResponse = await res.json();
       setAnalysisResult(data);
       setIsSaved(data.cached);
     } catch (err: unknown) {
@@ -81,7 +76,7 @@ export default function SentenceAnalysisPage() {
     setSaveSuccessMsg('');
 
     try {
-      const res = await fetch('/api/sentences', {
+      await safeFetchJson('/api/sentences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,11 +85,6 @@ export default function SentenceAnalysisPage() {
           analysisResult: analysisResult.analysis
         }),
       });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Save failed');
-      }
 
       setIsSaved(true);
       setSaveSuccessMsg('Sentence successfully added to collection!');

@@ -28,7 +28,17 @@ export async function callLlmWithRetry(options: LlmRequestOptions): Promise<stri
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Model API error (HTTP ${response.status}): ${errorText}`);
+        let cleanText = errorText;
+        if (/<[a-z][\s\S]*>/i.test(errorText)) {
+          const titleMatch = errorText.match(/<title>(.*?)<\/title>/i);
+          if (titleMatch && titleMatch[1]) {
+            cleanText = titleMatch[1].trim();
+          } else {
+            cleanText = errorText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            if (cleanText.length > 100) cleanText = cleanText.substring(0, 100) + '...';
+          }
+        }
+        throw new Error(`Model API error (HTTP ${response.status}): ${cleanText || 'Gateway/Service error'}`);
       }
 
       const data = (await response.json()) as any;

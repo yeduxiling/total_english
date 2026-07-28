@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import SourceAutocomplete from '../../components/SourceAutocomplete.js';
+import { safeFetchJson } from '../../utils/api.js';
 import './LookupPage.css';
 
 interface LookupResult {
@@ -50,16 +51,11 @@ export default function LookupPage() {
     setIsEditingSource(true);
 
     try {
-      const res = await fetch('/api/lookup', {
+      const data = await safeFetchJson<LookupResponse>('/api/lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: word.trim(), sentence: sentence.trim() }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Lookup failed');
-      }
-      const data: LookupResponse = await res.json();
       setResponse(data);
       setMeaningVariants([data.result.contextualMeaning]);
       setCurrentVariantIndex(0);
@@ -76,7 +72,7 @@ export default function LookupPage() {
     setError('');
 
     try {
-      const res = await fetch('/api/reroll', {
+      const data = await safeFetchJson<{ contextualMeaning: string }>('/api/reroll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,12 +82,6 @@ export default function LookupPage() {
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Reroll failed');
-      }
-
-      const data = await res.json();
       const newVariants = [...meaningVariants, data.contextualMeaning];
       setMeaningVariants(newVariants);
       setCurrentVariantIndex(newVariants.length - 1);
@@ -138,17 +128,13 @@ export default function LookupPage() {
     try {
       const { result, isExistingWord, existingWordId } = response;
       if (isExistingWord && result.matchedMeaningId) {
-        const res = await fetch(`/api/words/meanings/${result.matchedMeaningId}/examples`, {
+        await safeFetchJson(`/api/words/meanings/${result.matchedMeaningId}/examples`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sentence: sentence.trim(), source: sourceTag }),
         });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Failed to save example sentence');
-        }
       } else if (isExistingWord && !result.matchedMeaningId) {
-        const res = await fetch(`/api/words/${existingWordId}/meanings`, {
+        await safeFetchJson(`/api/words/${existingWordId}/meanings`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -163,12 +149,8 @@ export default function LookupPage() {
             source: sourceTag,
           }),
         });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Failed to add meaning to existing word');
-        }
       } else {
-        const res = await fetch('/api/words', {
+        await safeFetchJson('/api/words', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -186,10 +168,6 @@ export default function LookupPage() {
             source: sourceTag,
           }),
         });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Failed to save new word');
-        }
       }
       setSaved(true);
     } catch (err) {

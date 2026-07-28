@@ -37,7 +37,20 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// API 404 路由兜底，确保 /api/* 未匹配时返回 JSON 而非 HTML 页面
+app.use('/api/*', (_req, res) => {
+  res.status(404).json({ error: '请求的 API 路由不存在' });
+});
+
+// 全局 Error 捕获中间件，确保所有未捕获异常均以 JSON 格式输出
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error'
+  });
+});
+
 // 启动服务
 app.listen(PORT, () => {
-  console.log(`✅ Total English Server 已启动: http://localhost:${PORT}`);
+  console.log(`✅ Total English Server 已启动，端口: ${PORT}`);
 });
