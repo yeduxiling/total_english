@@ -133,6 +133,8 @@ export default function SettingsPage() {
   
   const [savingLLM, setSavingLLM] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  // 测试状态：key = config id，value = 'idle' | 'testing' | 'ok' | 'error'
+  const [testingStates, setTestingStates] = useState<Record<string, { status: 'idle' | 'testing' | 'ok' | 'error'; msg?: string; latency?: number }>>({});
 
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
 
@@ -192,6 +194,25 @@ export default function SettingsPage() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleTestLLM = async (id: string) => {
+    setTestingStates(prev => ({ ...prev, [id]: { status: 'testing' } }));
+    try {
+      const res = await fetch(`/api/settings/models/${id}/test`, { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        setTestingStates(prev => ({ ...prev, [id]: { status: 'ok', latency: data.latency } }));
+      } else {
+        setTestingStates(prev => ({ ...prev, [id]: { status: 'error', msg: data.error } }));
+      }
+    } catch (err: any) {
+      setTestingStates(prev => ({ ...prev, [id]: { status: 'error', msg: err.message || '请求失败' } }));
+    }
+    // 5 秒后自动恢夏显示
+    setTimeout(() => {
+      setTestingStates(prev => ({ ...prev, [id]: { status: 'idle' } }));
+    }, 5000);
   };
 
   const handleDeleteLLM = async (id: string) => {
@@ -256,7 +277,9 @@ export default function SettingsPage() {
                   <p className="settings-desc">No LLM configurations found. Please add one.</p>
                 ) : (
                   <div className="llm-cards">
-                    {llmConfigs.map(c => (
+                    {llmConfigs.map(c => {
+                      const ts = testingStates[c.id] || { status: 'idle' };
+                      return (
                       <div key={c.id} className={`llm-card ${c.is_active ? 'active' : ''}`}>
                         <div className="llm-card-left">
                           <input 
@@ -271,12 +294,35 @@ export default function SettingsPage() {
                             <span className="llm-model">{c.model_id}</span>
                           </div>
                         </div>
-                        <div className="llm-card-actions">
-                          <button className="btn btn-ghost btn-sm" onClick={() => openEditLLM(c)}>Edit</button>
-                          <button className="btn btn-ghost btn-sm text-error" onClick={() => handleDeleteLLM(c.id)}>Delete</button>
+                        <div className="llm-card-right">
+                          {c.is_active === 1 && (
+                            <span className="llm-status-badge">
+                              <span className="llm-status-dot" />
+                              Active
+                            </span>
+                          )}
+                          {ts.status === 'ok' && (
+                            <span className="llm-test-result ok">✔ Connected ({ts.latency}ms)</span>
+                          )}
+                          {ts.status === 'error' && (
+                            <span className="llm-test-result error" title={ts.msg}>✖ Failed</span>
+                          )}
+                          <div className="llm-card-actions">
+                            <button
+                              className={`btn btn-ghost btn-sm llm-test-btn ${ts.status === 'testing' ? 'testing' : ''}`}
+                              onClick={() => handleTestLLM(c.id)}
+                              disabled={ts.status === 'testing'}
+                              title="Test model connectivity"
+                            >
+                              {ts.status === 'testing' ? 'Testing...' : 'Test'}
+                            </button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => openEditLLM(c)}>Edit</button>
+                            <button className="btn btn-ghost btn-sm text-error" onClick={() => handleDeleteLLM(c.id)}>Delete</button>
+                          </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
                 

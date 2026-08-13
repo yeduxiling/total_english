@@ -11,22 +11,13 @@ You MUST output strictly in the following JSON format with no extra text:
   "contextualMeaning": "the general dictionary definition that fits this context (in English). CRITICAL: Do NOT include specific names, subjects, or objects from the example sentence. Keep it general (e.g., use 'someone' or 'something').",
   "synonyms": ["synonym1", "synonym2", "synonym3"],
   "collocations": ["collocation1", "collocation2", "collocation3"],
-  "frequencyRating": 4,
-  "frequencyNote": "brief frequency note, keep under 10 words",
   "matchedMeaningId": null
 }
 
 CRITICAL RULES FOR "word" FIELD:
 1. Identify and return the dictionary base form (lemma) of the analyzed word/phrase, removing inflections like tense (past, present participle, etc.), plural suffixes, or comparative/superlative suffixes (e.g., return "go" for "went"/"going", "example" for "examples", "large" for "larger").
 2. Convert the word/phrase to lowercase. However, keep proper nouns (like "London", "Shakespeare") capitalized as appropriate. If a word is capitalized ONLY because it is at the beginning of the sentence, convert it to lowercase.
-3. EXCEPTION: If a word ending in "-ed" acts as an adjective in this context (e.g., "excited", "sophisticated", "limited"), do NOT restore it to its root verb form. Keep the adjective form.
-
-Frequency rating scale (1-5 stars):
-5: Core high-frequency word, essential for daily use
-4: Common word, widely used across contexts
-3: Mid-frequency, often in academic or formal settings
-2: Low-frequency, domain-specific
-1: Rare word, seldom used`;
+3. EXCEPTION: If a word ending in "-ed" acts as an adjective in this context (e.g., "excited", "sophisticated", "limited"), do NOT restore it to its root verb form. Keep the adjective form.`;
 
 const DEFAULT_USER_PROMPT = `Word: {{word}}
 Sentence: {{sentence}}

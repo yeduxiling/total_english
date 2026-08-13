@@ -15,8 +15,6 @@ interface Meaning {
   contextual_meaning: string;
   synonyms: string[];
   collocations: string[];
-  frequency_rating: number;
-  frequency_note: string;
   examples: Example[];
 }
 
@@ -120,14 +118,6 @@ function MeaningBlock({
 
   return (
     <div className="dict-meaning-block">
-      <div className="dict-meaning-header">
-        <div className="dict-stars">
-          {Array.from({ length: 5 }, (_, i) => (
-            <span key={i} className={i < meaning.frequency_rating ? 'star-on' : 'star-off'}>★</span>
-          ))}
-        </div>
-      </div>
-
       <p className="dict-meaning-text">
         {currentVariant ? currentVariant.contextual_meaning : meaning.contextual_meaning}
       </p>
@@ -270,7 +260,7 @@ export default function DictionaryPage() {
   const [loading, setLoading] = useState(true);
   const [expandedWord, setExpandedWord] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'time-desc' | 'time-asc' | 'alpha-asc' | 'alpha-desc'>('time-desc');
+  const [sortBy, setSortBy] = useState<'time-desc' | 'time-asc' | 'alpha-asc' | 'alpha-desc' | 'encounters-desc'>('time-desc');
   const [filterType, setFilterType] = useState<'all' | 'word' | 'phrase'>('all');
 
   const fetchWords = async () => {
@@ -341,6 +331,12 @@ export default function DictionaryPage() {
       if (sortBy === 'alpha-desc') {
         return b.word.localeCompare(a.word); // Z-A
       }
+      if (sortBy === 'encounters-desc') {
+        // 按该词所有含义下的例句总数从多到少（个人词频）
+        const countA = a.meanings.reduce((sum, m) => sum + m.examples.length, 0);
+        const countB = b.meanings.reduce((sum, m) => sum + m.examples.length, 0);
+        return countB - countA;
+      }
       return 0;
     });
 
@@ -400,6 +396,7 @@ export default function DictionaryPage() {
               <option value="time-asc">⏳ Oldest Added</option>
               <option value="alpha-asc">🔤 Alphabetical (A-Z)</option>
               <option value="alpha-desc">🔤 Alphabetical (Z-A)</option>
+              <option value="encounters-desc">🔥 Most Encountered</option>
             </select>
           </div>
 

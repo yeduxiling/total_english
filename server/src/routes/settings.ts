@@ -112,6 +112,78 @@ router.put('/models/:id/activate', (req, res) => {
   }
 });
 
+// POST /api/settings/models/:id/test - 测试模型连通性
+router.post('/models/:id/test', async (req, res) => {
+  const db = getDb();
+  const model = db.prepare('SELECT * FROM model_configs WHERE id = ?').get(req.params.id) as any;
+  if (!model) {
+    return res.status(404).json({ ok: false, error: 'Configuration not found' });
+  }
+
+  const apiUrl = `${model.base_url.replace(/\/$/, '')}/chat/completions`;
+  const startTime = Date.now();
+
+  // 15s 超时保护，避免请求无限挂起
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${model.api_key}`,
+      },
+      body: JSON.stringify({
+        model: model.model_id,
+        messages: [{ role: 'user', content: 'Reply with the single word: OK' }],
+        max_tokens: 32,   // 适当放大，避免 reasoning 前缀被截断导致 content 为空
+        temperature: 0,
+      }),
+    });
+
+    clearTimeout(timeoutId);
+    const latency = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let cleanError = errorText;
+      // 优先解析 JSON 错误体（OpenAI / DeepSeek 风格）
+      try {
+        const errJson = JSON.parse(errorText);
+        const msg = errJson?.error?.message || errJson?.message;
+        if (msg) cleanError = String(msg);
+      } catch { /* 非 JSON，继续用文本 */ }
+      // 如果是 HTML 错误页，提取 title
+      if (cleanError === errorText && /<[a-z][\s\S]*>/i.test(errorText)) {
+        const titleMatch = errorText.match(/<title>(.*?)<\/title>/i);
+        cleanError = titleMatch?.[1]?.trim() || errorText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 120);
+      }
+      return res.json({ ok: false, error: `HTTP ${response.status}: ${cleanError}`, latency });
+    }
+
+    const data = await response.json() as any;
+    const content = data.choices?.[0]?.message?.content;
+    // 严格判空：undefined / null / 纯空字符串均视为失败
+    if (content === undefined || content === null || String(content).trim() === '') {
+      return res.json({ ok: false, error: 'Model returned empty content', latency });
+    }
+
+    return res.json({ ok: true, latency, reply: String(content).trim() });
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    const latency = Date.now() - startTime;
+    const isTimeout = err.name === 'AbortError';
+    return res.json({
+      ok: false,
+      error: isTimeout ? 'Request timed out (15s)' : (err.message || 'Network connection failed'),
+      latency,
+    });
+  }
+});
+
+
 // DELETE /api/settings/models/:id - 删除模型配置
 router.delete('/models/:id', (req, res) => {
   const db = getDb();

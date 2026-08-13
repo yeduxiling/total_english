@@ -11,8 +11,6 @@ interface LookupResult {
   contextualMeaning: string;
   synonyms: string[];
   collocations: string[];
-  frequencyRating: number;
-  frequencyNote: string;
   matchedMeaningId: string | null;
 }
 
@@ -142,8 +140,6 @@ export default function LookupPage() {
               contextualMeaning: meaningVariants[currentVariantIndex],
               synonyms: result.synonyms,
               collocations: result.collocations,
-              frequencyRating: result.frequencyRating,
-              frequencyNote: result.frequencyNote,
             },
             sentence: sentence.trim(),
             source: sourceTag,
@@ -161,8 +157,6 @@ export default function LookupPage() {
               contextualMeaning: meaningVariants[currentVariantIndex],
               synonyms: result.synonyms,
               collocations: result.collocations,
-              frequencyRating: result.frequencyRating,
-              frequencyNote: result.frequencyNote,
             },
             sentence: sentence.trim(),
             source: sourceTag,
@@ -280,15 +274,7 @@ export default function LookupPage() {
                 <span className="result-pos-badge">{r.partOfSpeech}</span>
               </div>
             </div>
-            <div className="result-hero-right">
-              <div className="result-stars">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <span key={i} className={i < r.frequencyRating ? 'star star-on' : 'star star-off'}>★</span>
-                ))}
-              </div>
-              <span className="result-freq-note">{r.frequencyNote}</span>
-            </div>
-          </div>
+        </div>
 
           {/* Meaning */}
           <div className="result-body">
