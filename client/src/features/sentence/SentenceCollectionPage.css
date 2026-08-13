@@ -56,6 +56,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  position: relative;
+  z-index: 5;
 }
 
 .card-section-title {
@@ -122,6 +124,10 @@
   transform: translateY(-2px);
   border-color: var(--color-accent-light);
   box-shadow: 0 10px 25px rgba(99, 102, 241, 0.08), 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.sentence-card.editing {
+  z-index: 10;
 }
 
 .card-top-row {

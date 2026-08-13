@@ -1,101 +1,149 @@
 import { useState, useEffect } from 'react';
 import './SettingsPage.css';
 
+// ─── Tag Settings ─────────────────────────────────────────────────────────────
+
 interface TagData {
-  id: number;
   name: string;
-  count: number;
+  chunk_count: number;
+  sentence_count: number;
 }
 
 function TagSettings() {
-  const [tags, setTags] = useState<TagData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newTag, setNewTag] = useState('');
+  const [tags, setTags]               = useState<TagData[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [editingName, setEditingName] = useState<string | null>(null);
+  const [editValue, setEditValue]     = useState('');
+  const [saving, setSaving]           = useState(false);
+  const [errorMsg, setErrorMsg]       = useState('');
 
-  const loadTags = (showLoading = true) => {
-    if (showLoading) setLoading(true);
+  const loadTags = () => {
+    setLoading(true);
     fetch('/api/tags')
-      .then(res => res.json())
-      .then(data => {
-        setTags(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+      .then(r => r.json())
+      .then(data => { setTags(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadTags(false);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+  useEffect(() => { loadTags(); }, []);
 
-  const handleAdd = async () => {
-    if (!newTag.trim()) return;
-    try {
-      await fetch('/api/tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newTag }),
-      });
-      setNewTag('');
-      loadTags();
-    } catch (err) {
-      console.error(err);
+  const startEdit = (name: string) => {
+    setEditingName(name);
+    setEditValue(name);
+    setErrorMsg('');
+  };
+
+  const cancelEdit = () => {
+    setEditingName(null);
+    setEditValue('');
+    setErrorMsg('');
+  };
+
+  const handleRename = async () => {
+    if (!editingName) return;
+    const trimmed = editValue.trim();
+    if (!trimmed) { setErrorMsg('Name cannot be empty'); return; }
+    if (trimmed === editingName) { cancelEdit(); return; }
+    
+    // 如果目标标签已存在，提示用户是否合并
+    const exists = tags.some(t => t.name === trimmed);
+    if (exists) {
+      const confirmMerge = window.confirm(
+        `The tag "${trimmed}" already exists. Do you want to merge "${editingName}" into "${trimmed}"?\n\nThis will combine all chunks and sentences under "${trimmed}".`
+      );
+      if (!confirmMerge) return;
     }
-  };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this tag globally? It will be removed from all words.')) return;
+    setSaving(true);
+    setErrorMsg('');
     try {
-      await fetch(`/api/tags/${id}`, { method: 'DELETE' });
+      const res = await fetch('/api/tags/rename', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldName: editingName, newName: trimmed }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setErrorMsg(err.error || 'Rename failed');
+        return;
+      }
+      cancelEdit();
       loadTags();
-    } catch (err) {
-      console.error(err);
+    } catch {
+      setErrorMsg('Network error');
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
     <div className="settings-section animate-in">
-      <h2>Tag Management</h2>
-      <p className="settings-desc">Manage your global tags here. Adding or deleting tags here affects the entire dictionary.</p>
-      
-      <div className="tag-add-form">
-        <input 
-          className="input" 
-          value={newTag}
-          onChange={e => setNewTag(e.target.value)}
-          placeholder="Enter new tag name..."
-          onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
-        />
-        <button className="btn btn-primary" onClick={handleAdd}>Add Tag</button>
-      </div>
+      <h2>Source Tags</h2>
+      <p className="settings-desc">
+        All source tags across your chunks and sentences. Click ✏️ to rename a tag — changes apply everywhere it's used.
+      </p>
 
       <div className="tags-list">
         {loading ? (
           <div className="spinner-container"><span className="spinner" /></div>
         ) : tags.length === 0 ? (
-          <p className="settings-desc">No tags found.</p>
+          <p className="settings-desc">No tags found. Tags are created automatically when you add a source to a chunk or sentence.</p>
         ) : (
           <div className="tags-grid">
-            {tags.map(t => (
-              <div key={t.id} className="tag-item card">
-                <div className="tag-item-info">
-                  <span className="tag-name">{t.name}</span>
-                  <span className="tag-count" title="Number of words using this tag">{t.count} words</span>
+            {tags.map(t => {
+              const isEditing = editingName === t.name;
+              return (
+                <div key={t.name} className={`tag-item card ${isEditing ? 'tag-item-editing' : ''}`}>
+                  {isEditing ? (
+                    <div className="tag-edit-row">
+                      <input
+                        className="input tag-edit-input"
+                        value={editValue}
+                        autoFocus
+                        onChange={e => setEditValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleRename();
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                        disabled={saving}
+                      />
+                      <button className="btn btn-primary btn-sm" onClick={handleRename} disabled={saving}>
+                        {saving ? '…' : 'Save'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={cancelEdit} disabled={saving}>Cancel</button>
+                      {errorMsg && <span className="tag-edit-error">{errorMsg}</span>}
+                    </div>
+                  ) : (
+                    <div className="tag-item-info">
+                      <span className="tag-name">🏷 {t.name}</span>
+                      <div className="tag-counts">
+                        <span className="tag-count" title="Chunk examples using this tag">
+                          {t.chunk_count} {t.chunk_count === 1 ? 'chunk' : 'chunks'}
+                        </span>
+                        {t.sentence_count > 0 && (
+                          <span className="tag-count tag-count-sentence" title="Sentences using this tag">
+                            · {t.sentence_count} {t.sentence_count === 1 ? 'sentence' : 'sentences'}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        className="btn-icon tag-edit-btn"
+                        title="Rename this tag everywhere"
+                        onClick={() => startEdit(t.name)}
+                      >✏️</button>
+                    </div>
+                  )}
                 </div>
-                <button className="btn-icon tag-delete" onClick={() => handleDelete(t.id)} title="Delete globally">🗑</button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface LlmConfig {
   id: string;
@@ -116,7 +164,7 @@ interface PromptTemplate {
   updated_at: string;
 }
 
-
+// ─── SettingsPage ─────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'llm' | 'prompts' | 'tags'>('llm');
@@ -133,7 +181,6 @@ export default function SettingsPage() {
   
   const [savingLLM, setSavingLLM] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  // 测试状态：key = config id，value = 'idle' | 'testing' | 'ok' | 'error'
   const [testingStates, setTestingStates] = useState<Record<string, { status: 'idle' | 'testing' | 'ok' | 'error'; msg?: string; latency?: number }>>({});
 
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
@@ -147,7 +194,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadLLMConfigs();
-
     fetch('/api/prompts')
       .then(res => res.json())
       .then(data => setPrompts(data))
@@ -207,9 +253,8 @@ export default function SettingsPage() {
         setTestingStates(prev => ({ ...prev, [id]: { status: 'error', msg: data.error } }));
       }
     } catch (err: any) {
-      setTestingStates(prev => ({ ...prev, [id]: { status: 'error', msg: err.message || '请求失败' } }));
+      setTestingStates(prev => ({ ...prev, [id]: { status: 'error', msg: err.message || 'Request failed' } }));
     }
-    // 5 秒后自动恢夏显示
     setTimeout(() => {
       setTestingStates(prev => ({ ...prev, [id]: { status: 'idle' } }));
     }, 5000);

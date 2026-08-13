@@ -231,7 +231,7 @@ export default function SentenceCollectionPage() {
       ) : (
         <div className="sentence-list">
           {sentences.map((item) => (
-            <div key={item.id} className="sentence-card">
+            <div key={item.id} className={`sentence-card ${editingId === item.id ? 'editing' : ''}`}>
               <div className="card-top-row">
                 <div className="source-badges">
                   <span className={`source-badge ${item.source}`}>

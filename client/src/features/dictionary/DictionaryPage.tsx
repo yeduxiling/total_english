@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import SourceAutocomplete from '../../components/SourceAutocomplete.js';
 import './DictionaryPage.css';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Example {
   id: string;
@@ -10,335 +12,353 @@ interface Example {
   added_at: string;
 }
 
-interface Meaning {
-  id: string;
-  contextual_meaning: string;
-  synonyms: string[];
-  collocations: string[];
-  examples: Example[];
-}
-
-interface WordEntry {
-  id: number;
-  word: string;
-  phonetic: string;
-  part_of_speech: string;
-  meanings: Meaning[];
-  created_at: string;
-  updated_at: string;
-}
-
 interface MeaningVariant {
   id: string;
   contextual_meaning: string;
   is_selected: number;
 }
 
-function MeaningBlock({ 
-  meaning, 
-  wordEntry, 
-  onSelectVariant
-}: { 
-  meaning: Meaning, 
-  wordEntry: WordEntry, 
-  onSelectVariant: (meaningId: string, newMeaning: string) => void
+interface MeaningChunk {
+  meaning_id: string;
+  word_id: number;
+  word: string;
+  phonetic: string;
+  part_of_speech: string;
+  contextual_meaning: string;
+  synonyms: string[];
+  collocations: string[];
+  example_count: number;
+  examples: Example[];
+}
+
+interface PaginatedResponse {
+  data: MeaningChunk[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+type SortKey = 'time-desc' | 'time-asc' | 'alpha-asc' | 'alpha-desc' | 'encounters-desc';
+type FilterKey = 'all' | 'word' | 'phrase';
+
+const PAGE_LIMIT = 20;
+
+// ─── MeaningChunkCard ─────────────────────────────────────────────────────────
+
+function MeaningChunkCard({
+  chunk,
+  onDelete,
+}: {
+  chunk: MeaningChunk;
+  onDelete: (meaningId: string) => void;
 }) {
-  const [variants, setVariants] = useState<MeaningVariant[]>([]);
+  const [expanded, setExpanded]       = useState(false);
+  const [variants, setVariants]       = useState<MeaningVariant[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRerolling, setIsRerolling] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded]           = useState(false);
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
-  const [editSourceText, setEditSourceText] = useState('');
-  const [savingExampleId, setSavingExampleId] = useState<string | null>(null);
+  const [editSourceText, setEditSourceText]     = useState('');
+  const [savingExampleId, setSavingExampleId]   = useState<string | null>(null);
+  const [localExamples, setLocalExamples]       = useState<Example[]>(chunk.examples);
 
+  // 展开时懒加载 variants
   useEffect(() => {
-    fetch(`/api/words/meanings/${meaning.id}/variants`)
-      .then(res => res.json())
-      .then(data => {
+    if (!expanded || loaded) return;
+    fetch(`/api/words/meanings/${chunk.meaning_id}/variants`)
+      .then(r => r.json())
+      .then((data: MeaningVariant[]) => {
         if (Array.isArray(data) && data.length > 0) {
           setVariants(data);
-          const selectedIdx = data.findIndex(v => v.is_selected === 1);
-          setCurrentIndex(selectedIdx >= 0 ? selectedIdx : 0);
+          const sel = data.findIndex(v => v.is_selected === 1);
+          setCurrentIndex(sel >= 0 ? sel : 0);
         } else {
-          // Fallback if no variants exist
-          setVariants([{ id: 'default', contextual_meaning: meaning.contextual_meaning, is_selected: 1 }]);
-          setCurrentIndex(0);
+          setVariants([{ id: 'default', contextual_meaning: chunk.contextual_meaning, is_selected: 1 }]);
         }
         setLoaded(true);
-      });
-  }, [meaning.id, meaning.contextual_meaning]);
+      })
+      .catch(() => setLoaded(true));
+  }, [expanded, loaded, chunk.meaning_id, chunk.contextual_meaning]);
+
+  const currentVariant = variants[currentIndex];
+  const displayMeaning = loaded && currentVariant
+    ? currentVariant.contextual_meaning
+    : chunk.contextual_meaning;
 
   const handleReroll = async () => {
     if (isRerolling) return;
     setIsRerolling(true);
     try {
-      const sentence = meaning.examples.length > 0 ? meaning.examples[0].sentence : '';
-      const previousMeanings = variants.map(v => v.contextual_meaning);
-      
+      const sentence = localExamples.length > 0 ? localExamples[0].sentence : '';
       const res = await fetch('/api/reroll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: wordEntry.word, sentence, previousMeanings }),
+        body: JSON.stringify({ word: chunk.word, sentence, previousMeanings: variants.map(v => v.contextual_meaning) }),
       });
       if (!res.ok) throw new Error('Reroll failed');
       const data = await res.json();
-
-      // Add new variant
-      const addRes = await fetch(`/api/words/meanings/${meaning.id}/variants`, {
+      const addRes = await fetch(`/api/words/meanings/${chunk.meaning_id}/variants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: wordEntry.word, sentence, contextualMeaning: data.contextualMeaning }),
+        body: JSON.stringify({ word: chunk.word, sentence, contextualMeaning: data.contextualMeaning }),
       });
       const addData = await addRes.json();
-      
-      const newVariants = [...variants, { id: addData.id, contextual_meaning: data.contextualMeaning, is_selected: 0 }];
-      setVariants(newVariants);
-      setCurrentIndex(newVariants.length - 1);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsRerolling(false);
-    }
+      const next = [...variants, { id: addData.id, contextual_meaning: data.contextualMeaning, is_selected: 0 }];
+      setVariants(next);
+      setCurrentIndex(next.length - 1);
+    } catch (e) { console.error(e); }
+    finally { setIsRerolling(false); }
   };
 
   const handleSelectVariant = async () => {
-    const variant = variants[currentIndex];
-    if (!variant || variant.id === 'default' || variant.is_selected === 1) return;
+    const v = variants[currentIndex];
+    if (!v || v.id === 'default' || v.is_selected === 1) return;
     try {
-      await fetch(`/api/words/meanings/${meaning.id}/variants/${variant.id}/select`, { method: 'PUT' });
-      const newVariants = variants.map(v => ({ ...v, is_selected: v.id === variant.id ? 1 : 0 }));
-      setVariants(newVariants);
-      onSelectVariant(meaning.id, variant.contextual_meaning);
-    } catch (e) {
-      console.error(e);
-    }
+      await fetch(`/api/words/meanings/${chunk.meaning_id}/variants/${v.id}/select`, { method: 'PUT' });
+      setVariants(variants.map(x => ({ ...x, is_selected: x.id === v.id ? 1 : 0 })));
+    } catch (e) { console.error(e); }
   };
 
-  const currentVariant = variants[currentIndex];
+  const handleSaveSource = async (exId: string, text: string) => {
+    if (savingExampleId === exId) return;
+    const finalVal = text.trim();
+    const ex = localExamples.find(e => e.id === exId);
+    if (!ex || finalVal === (ex.source || '')) { setEditingExampleId(null); return; }
+    setSavingExampleId(exId);
+    try {
+      const r = await fetch(`/api/words/examples/${exId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: finalVal }),
+      });
+      if (r.ok) setLocalExamples(localExamples.map(e => e.id === exId ? { ...e, source: finalVal || null } : e));
+    } catch (e) { console.error(e); }
+    finally { setSavingExampleId(null); setEditingExampleId(null); }
+  };
+
+  const encounterLabel = chunk.example_count === 1 ? 'encounter' : 'encounters';
 
   return (
-    <div className="dict-meaning-block">
-      <p className="dict-meaning-text">
-        {currentVariant ? currentVariant.contextual_meaning : meaning.contextual_meaning}
-      </p>
-
-      {/* Reroll controls */}
-      {loaded && meaning.examples.length > 0 && (
-        <div className="reroll-controls" style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="reroll-nav" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button 
-              className="btn-icon" 
-              onClick={() => setCurrentIndex(currentIndex - 1)} 
-              disabled={currentIndex === 0}
-            >◀</button>
-            <span className="reroll-counter" style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', minWidth: 40, textAlign: 'center' }}>
-              {currentIndex + 1} / {variants.length}
-            </span>
-            <button 
-              className="btn-icon" 
-              onClick={() => setCurrentIndex(currentIndex + 1)} 
-              disabled={currentIndex === variants.length - 1}
-            >▶</button>
-          </div>
-          
-          <div style={{ display: 'flex', gap: 8 }}>
-            {currentVariant && currentVariant.is_selected === 0 && currentVariant.id !== 'default' && (
-              <button className="btn btn-primary btn-sm" onClick={handleSelectVariant}>
-                ✓ Use this
-              </button>
-            )}
-            <button 
-              className={`btn btn-secondary btn-sm reroll-btn ${isRerolling ? 'loading' : ''}`}
-              onClick={handleReroll}
-              disabled={isRerolling}
-            >
-              <span className="reroll-icon">🎲</span>
-              {isRerolling ? 'Rolling...' : 'Roll'}
-            </button>
-          </div>
+    <div className={`dict-card chunk-card ${expanded ? 'expanded' : ''}`}>
+      {/* ── Header (always visible, click to expand) ── */}
+      <div className="chunk-card-header" onClick={() => setExpanded(e => !e)}>
+        <div className="chunk-word-info">
+          <span className="dict-word font-english">{chunk.word}</span>
+          {chunk.phonetic && <span className="dict-phonetic font-mono">{chunk.phonetic}</span>}
+          {chunk.part_of_speech && <span className="dict-pos">{chunk.part_of_speech}</span>}
+          <span
+            className="chunk-encounter-badge"
+            title="Times you've encountered this meaning in your reading"
+            onClick={e => e.stopPropagation()}
+          >
+            🔥 {chunk.example_count} {encounterLabel}
+          </span>
         </div>
-      )}
-
-      {meaning.synonyms.length > 0 && (
-        <div className="dict-chips-row" style={{ marginTop: 12 }}>
-          <span className="dict-chips-label">Synonyms</span>
-          <div className="dict-chips">
-            {meaning.synonyms.map((s, i) => (
-              <span key={i} className="dict-chip-synonym font-english">{s}</span>
-            ))}
-          </div>
+        <div className="chunk-header-right">
+          <p className="chunk-meaning-preview">{displayMeaning}</p>
+          <span className={`dict-expand-icon ${expanded ? 'open' : ''}`}>▸</span>
         </div>
-      )}
+      </div>
 
-      {meaning.collocations.length > 0 && (
-        <div className="dict-chips-row">
-          <span className="dict-chips-label">Collocations</span>
-          <div className="dict-chips">
-            {meaning.collocations.map((c, i) => (
-              <span key={i} className="dict-chip-collocation font-english">{c}</span>
-            ))}
+      {/* ── Expanded body ── */}
+      {expanded && (
+        <div className="dict-card-body">
+          {/* Speak button row */}
+          <div className="chunk-speak-row">
+            <SpeakButton wordId={chunk.word_id} size="sm" />
+            <span className="chunk-speak-label">Listen to pronunciation</span>
           </div>
-        </div>
-      )}
 
-      {meaning.examples.length > 0 && (
-        <div className="dict-examples">
-          <span className="dict-chips-label">Examples</span>
-          {meaning.examples.map(ex => {
-            const isEditing = editingExampleId === ex.id;
-            
-            const handleSaveSource = async (text: string) => {
-              if (savingExampleId === ex.id) return;
-              const finalVal = text.trim();
-              if (finalVal === (ex.source || '')) {
-                setEditingExampleId(null);
-                return;
-              }
-              setSavingExampleId(ex.id);
-              try {
-                const res = await fetch(`/api/words/examples/${ex.id}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ source: finalVal })
-                });
-                if (res.ok) {
-                  ex.source = finalVal || null;
-                }
-              } catch (e) {
-                console.error(e);
-              } finally {
-                setSavingExampleId(null);
-                setEditingExampleId(null);
-              }
-            };
+          <div className="dict-meaning-block">
+            <p className="dict-meaning-text">{displayMeaning}</p>
 
-            return (
-              <div key={ex.id} className="dict-example-row" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
-                  <div className="dict-example-container">
-                    <p className={`dict-example ${ex.source ? 'has-source-sentence' : ''}`} style={{ margin: 0 }}>
-                      {ex.sentence}
-                    </p>
-                    <div className="dict-example-source-row">
-                      {!isEditing ? (
-                        <span 
-                          className="source-tag-badge clickable-tag" 
-                          onClick={() => {
-                            setEditingExampleId(ex.id);
-                            setEditSourceText(ex.source || '');
-                          }}
-                          title="Click to edit source"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {ex.source || '+ Add Source'}
-                        </span>
-                      ) : (
-                        <SourceAutocomplete
-                          value={editSourceText}
-                          onChange={setEditSourceText}
-                          onSave={(val) => handleSaveSource(val || editSourceText)}
-                          placeholder="Sentence Source"
-                          className="dict-source-autocomplete"
-                          disabled={savingExampleId === ex.id}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  <SpeakButton text={ex.sentence} size="sm" />
+            {/* Reroll controls */}
+            {loaded && localExamples.length > 0 && (
+              <div className="reroll-controls" style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="reroll-nav" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <button className="btn-icon" onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0}>◀</button>
+                  <span className="reroll-counter" style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', minWidth: 40, textAlign: 'center' }}>
+                    {currentIndex + 1} / {variants.length}
+                  </span>
+                  <button className="btn-icon" onClick={() => setCurrentIndex(i => i + 1)} disabled={currentIndex === variants.length - 1}>▶</button>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {currentVariant && currentVariant.is_selected === 0 && currentVariant.id !== 'default' && (
+                    <button className="btn btn-primary btn-sm" onClick={handleSelectVariant}>✓ Use this</button>
+                  )}
+                  <button
+                    className={`btn btn-secondary btn-sm reroll-btn ${isRerolling ? 'loading' : ''}`}
+                    onClick={handleReroll}
+                    disabled={isRerolling}
+                  >
+                    <span className="reroll-icon">🎲</span>
+                    {isRerolling ? 'Rolling...' : 'Roll'}
+                  </button>
                 </div>
               </div>
-            );
-          })}
+            )}
+
+            {/* Synonyms */}
+            {chunk.synonyms.length > 0 && (
+              <div className="dict-chips-row" style={{ marginTop: 12 }}>
+                <span className="dict-chips-label">Synonyms</span>
+                <div className="dict-chips">
+                  {chunk.synonyms.map((s, i) => <span key={i} className="dict-chip-synonym font-english">{s}</span>)}
+                </div>
+              </div>
+            )}
+
+            {/* Collocations */}
+            {chunk.collocations.length > 0 && (
+              <div className="dict-chips-row">
+                <span className="dict-chips-label">Collocations</span>
+                <div className="dict-chips">
+                  {chunk.collocations.map((c, i) => <span key={i} className="dict-chip-collocation font-english">{c}</span>)}
+                </div>
+              </div>
+            )}
+
+            {/* Examples */}
+            {localExamples.length > 0 && (
+              <div className="dict-examples">
+                <span className="dict-chips-label">Examples</span>
+                {localExamples.map(ex => {
+                  const isEditing = editingExampleId === ex.id;
+                  return (
+                    <div key={ex.id} className="dict-example-row" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+                        <div className="dict-example-container">
+                          <p className={`dict-example ${ex.source ? 'has-source-sentence' : ''}`} style={{ margin: 0 }}>{ex.sentence}</p>
+                          <div className="dict-example-source-row">
+                            {!isEditing ? (
+                              <span
+                                className="source-tag-badge clickable-tag"
+                                onClick={() => { setEditingExampleId(ex.id); setEditSourceText(ex.source || ''); }}
+                                title="Click to edit source"
+                                style={{ cursor: 'pointer' }}
+                              >
+                                {ex.source || '+ Add Source'}
+                              </span>
+                            ) : (
+                              <SourceAutocomplete
+                                value={editSourceText}
+                                onChange={setEditSourceText}
+                                onSave={(val) => handleSaveSource(ex.id, val || editSourceText)}
+                                placeholder="Sentence Source"
+                                className="dict-source-autocomplete"
+                                disabled={savingExampleId === ex.id}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <SpeakButton text={ex.sentence} size="sm" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer: delete */}
+          <div className="dict-card-footer">
+            <button
+              className="btn btn-ghost btn-sm dict-delete-btn"
+              onClick={() => {
+                const msg = chunk.example_count > 0
+                  ? `Delete this meaning of "${chunk.word}"? Its ${chunk.example_count} example sentence(s) will also be removed. If this is the last meaning, the word will be deleted too.`
+                  : `Delete this meaning of "${chunk.word}"? If this is the last meaning, the word will be deleted too.`;
+                if (confirm(msg)) onDelete(chunk.meaning_id);
+              }}
+            >
+              Delete Meaning
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+// ─── Pagination helper ────────────────────────────────────────────────────────
+
+function buildPageList(current: number, total: number): (number | '…')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | '…')[] = [];
+  const show = new Set([1, total, current - 1, current, current + 1].filter(p => p >= 1 && p <= total));
+  let prev = 0;
+  Array.from(show).sort((a, b) => a - b).forEach(p => {
+    if (p - prev > 1) pages.push('…');
+    pages.push(p);
+    prev = p;
+  });
+  return pages;
+}
+
+// ─── DictionaryPage ───────────────────────────────────────────────────────────
+
 export default function DictionaryPage() {
-  const [words, setWords] = useState<WordEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [expandedWord, setExpandedWord] = useState<number | null>(null);
+  const [chunks, setChunks]         = useState<MeaningChunk[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [page, setPage]             = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal]           = useState(0);
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'time-desc' | 'time-asc' | 'alpha-asc' | 'alpha-desc' | 'encounters-desc'>('time-desc');
-  const [filterType, setFilterType] = useState<'all' | 'word' | 'phrase'>('all');
+  const [sortBy, setSortBy]         = useState<SortKey>('time-desc');
+  const [filterType, setFilterType] = useState<FilterKey>('all');
 
-  const fetchWords = async () => {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchMeanings = async (p: number, search: string, sort: string, filter: string) => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/words');
-      const data = await res.json();
-      setWords(data);
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+      const qs = new URLSearchParams({ page: String(p), limit: String(PAGE_LIMIT), sort, search, filter });
+      const res = await fetch(`/api/words/meanings?${qs}`);
+      const data: PaginatedResponse = await res.json();
+      setChunks(data.data);
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // 初始加载
+  useEffect(() => { fetchMeanings(1, '', 'time-desc', 'all'); }, []);
+
+  // 搜索防抖 400ms
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchWords();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setSearchQuery(searchInput), 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchInput]);
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Delete this word from your dictionary?')) return;
+  // 搜索/排序/过滤变化时重置到第 1 页
+  useEffect(() => {
+    setPage(1);
+    fetchMeanings(1, searchQuery, sortBy, filterType);
+  }, [searchQuery, sortBy, filterType]); // eslint-disable-line
+
+  const goToPage = (p: number) => {
+    setPage(p);
+    fetchMeanings(p, searchQuery, sortBy, filterType);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteMeaning = async (meaningId: string) => {
     try {
-      await fetch(`/api/words/${id}`, { method: 'DELETE' });
-      setWords(words.filter(w => w.id !== id));
-    } catch { /* ignore */ }
+      await fetch(`/api/words/meanings/${meaningId}`, { method: 'DELETE' });
+      const next = chunks.filter(c => c.meaning_id !== meaningId);
+      setChunks(next);
+      setTotal(t => t - 1);
+      // 若当前页已空且不是第 1 页，跳回上一页
+      if (next.length === 0 && page > 1) goToPage(page - 1);
+    } catch (e) { console.error(e); }
   };
-
-  const handleSelectVariant = (wordId: number, meaningId: string, newMeaning: string) => {
-    setWords(words.map(w => {
-      if (w.id === wordId) {
-        return {
-          ...w,
-          meanings: w.meanings.map(m => m.id === meaningId ? { ...m, contextual_meaning: newMeaning } : m)
-        };
-      }
-      return w;
-    }));
-  };
-
-
-
-  const filtered = words
-    .filter(w => {
-      // 1. 文本搜索过滤（大小写不敏感）
-      const matchesSearch =
-        w.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.meanings.some(m => m.contextual_meaning.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      if (!matchesSearch) return false;
-
-      // 2. 单词/词组分类过滤
-      const isPhrase = w.word.trim().includes(' ');
-      if (filterType === 'word') return !isPhrase;
-      if (filterType === 'phrase') return isPhrase;
-      
-      return true;
-    })
-    .sort((a, b) => {
-      // 3. 排序逻辑
-      if (sortBy === 'time-desc') {
-        return b.id - a.id; // 最新添加在前
-      }
-      if (sortBy === 'time-asc') {
-        return a.id - b.id; // 最早添加在前
-      }
-      if (sortBy === 'alpha-asc') {
-        return a.word.localeCompare(b.word); // A-Z
-      }
-      if (sortBy === 'alpha-desc') {
-        return b.word.localeCompare(a.word); // Z-A
-      }
-      if (sortBy === 'encounters-desc') {
-        // 按该词所有含义下的例句总数从多到少（个人词频）
-        const countA = a.meanings.reduce((sum, m) => sum + m.examples.length, 0);
-        const countB = b.meanings.reduce((sum, m) => sum + m.examples.length, 0);
-        return countB - countA;
-      }
-      return 0;
-    });
 
   return (
     <div className="dictionary-page animate-in">
@@ -350,75 +370,53 @@ export default function DictionaryPage() {
         <p className="page-subtitle">Browse and manage your saved vocabulary</p>
       </div>
 
-      {/* Search & Stats */}
-      {words.length > 0 && (
-        <div className="dict-toolbar">
-          <div className="dict-search-wrap">
-            <span className="dict-search-icon">🔍</span>
-            <input
-              className="input dict-search"
-              placeholder="Search words or meanings..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="dict-filters">
-            {/* 只看单词/词组的分段选择器 */}
-            <div className="dict-filter-group">
-              <button
-                className={`filter-btn ${filterType === 'all' ? 'active' : ''}`}
-                onClick={() => setFilterType('all')}
-              >
-                All
-              </button>
-              <button
-                className={`filter-btn ${filterType === 'word' ? 'active' : ''}`}
-                onClick={() => setFilterType('word')}
-              >
-                Words
-              </button>
-              <button
-                className={`filter-btn ${filterType === 'phrase' ? 'active' : ''}`}
-                onClick={() => setFilterType('phrase')}
-              >
-                Phrases
-              </button>
-            </div>
-
-            {/* 排序下拉选择 */}
-            <select
-              className="dict-sort-select"
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as typeof sortBy)}
-            >
-              <option value="time-desc">📅 Latest Added</option>
-              <option value="time-asc">⏳ Oldest Added</option>
-              <option value="alpha-asc">🔤 Alphabetical (A-Z)</option>
-              <option value="alpha-desc">🔤 Alphabetical (Z-A)</option>
-              <option value="encounters-desc">🔥 Most Encountered</option>
-            </select>
-          </div>
-
-          <div className="dict-stats">
-            <span className="stat-number">{filtered.length}</span>
-            <span className="stat-label">
-              {filtered.length === 1 ? 'result' : 'results'}
-            </span>
-          </div>
+      {/* ── Toolbar ── */}
+      <div className="dict-toolbar">
+        <div className="dict-search-wrap">
+          <span className="dict-search-icon">🔍</span>
+          <input
+            className="input dict-search"
+            placeholder="Search chunks or meanings..."
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+          />
+          {searchInput && (
+            <button className="dict-search-clear" onClick={() => setSearchInput('')}>×</button>
+          )}
         </div>
-      )}
 
-      {/* Loading */}
+        <div className="dict-filters">
+          <div className="dict-filter-group">
+            <button className={`filter-btn ${filterType === 'all'    ? 'active' : ''}`} onClick={() => setFilterType('all')}>All</button>
+            <button className={`filter-btn ${filterType === 'word'   ? 'active' : ''}`} onClick={() => setFilterType('word')}>Words</button>
+            <button className={`filter-btn ${filterType === 'phrase' ? 'active' : ''}`} onClick={() => setFilterType('phrase')}>Phrases</button>
+          </div>
+
+          <select className="dict-sort-select" value={sortBy} onChange={e => setSortBy(e.target.value as SortKey)}>
+            <option value="time-desc">📅 Latest Added</option>
+            <option value="time-asc">⏳ Oldest Added</option>
+            <option value="alpha-asc">🔤 Alphabetical (A-Z)</option>
+            <option value="alpha-desc">🔤 Alphabetical (Z-A)</option>
+            <option value="encounters-desc">🔥 Most Encountered</option>
+          </select>
+        </div>
+
+        <div className="dict-stats">
+          <span className="stat-number">{total}</span>
+          <span className="stat-label">{total === 1 ? 'chunk' : 'chunks'}</span>
+        </div>
+      </div>
+
+      {/* ── Loading ── */}
       {loading && (
         <div className="dict-loading">
           <span className="spinner-lg" />
-          <span>Loading dictionary...</span>
+          <span>Loading...</span>
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && words.length === 0 && (
+      {/* ── Empty ── */}
+      {!loading && total === 0 && !searchInput && (
         <div className="dictionary-empty card">
           <div className="empty-icon">📚</div>
           <h3 className="empty-title">Your dictionary is empty</h3>
@@ -426,64 +424,48 @@ export default function DictionaryPage() {
         </div>
       )}
 
-      {/* No results */}
-      {!loading && words.length > 0 && filtered.length === 0 && (
+      {/* ── No results ── */}
+      {!loading && total === 0 && searchInput && (
         <div className="dict-no-results">
-          <p>No words match "<strong>{searchQuery}</strong>"</p>
+          <p>No meanings match "<strong>{searchInput}</strong>"</p>
         </div>
       )}
 
-      {/* Word list */}
-      {!loading && filtered.length > 0 && (
+      {/* ── Chunk list ── */}
+      {!loading && chunks.length > 0 && (
         <div className="dict-list">
-          {filtered.map(entry => {
-            const isExpanded = expandedWord === entry.id;
+          {chunks.map(chunk => (
+            <MeaningChunkCard
+              key={chunk.meaning_id}
+              chunk={chunk}
+              onDelete={handleDeleteMeaning}
+            />
+          ))}
+        </div>
+      )}
 
-            return (
-              <div key={entry.id} className={`dict-card ${isExpanded ? 'expanded' : ''}`}>
-                {/* Collapsed row */}
-                <div
-                  className="dict-card-header"
-                  onClick={() => setExpandedWord(isExpanded ? null : entry.id)}
-                >
-                  <div className="dict-card-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="dict-word font-english">{entry.word}</span>
-                    <SpeakButton wordId={entry.id} size="sm" />
-                    <span className="dict-phonetic font-mono">{entry.phonetic}</span>
-                    <span className="dict-pos">{entry.part_of_speech}</span>
-                  </div>
-                  <div className="dict-card-right">
-                    <div className="dict-meanings-count">
-                      {entry.meanings.length} {entry.meanings.length === 1 ? 'meaning' : 'meanings'}
-                    </div>
-                    <span className={`dict-expand-icon ${isExpanded ? 'open' : ''}`}>▸</span>
-                  </div>
-                </div>
+      {/* ── Pagination ── */}
+      {!loading && totalPages > 1 && (
+        <div className="dict-pagination">
+          <button className="btn btn-ghost btn-sm dict-page-nav" onClick={() => goToPage(page - 1)} disabled={page === 1}>
+            ← Prev
+          </button>
 
-                {/* Expanded detail */}
-                {isExpanded && (
-                  <div className="dict-card-body">
-                    {entry.meanings.map((meaning, mi) => (
-                      <div key={meaning.id}>
-                        <div className="dict-meaning-num" style={{ marginBottom: 8 }}>Meaning {mi + 1}</div>
-                        <MeaningBlock 
-                          meaning={meaning} 
-                          wordEntry={entry} 
-                          onSelectVariant={(mId, newM) => handleSelectVariant(entry.id, mId, newM)} 
-                        />
-                      </div>
-                    ))}
+          <div className="dict-page-numbers">
+            {buildPageList(page, totalPages).map((p, i) =>
+              p === '…'
+                ? <span key={`e-${i}`} className="dict-page-ellipsis">…</span>
+                : <button
+                    key={p}
+                    className={`dict-page-btn ${p === page ? 'active' : ''}`}
+                    onClick={() => goToPage(p as number)}
+                  >{p}</button>
+            )}
+          </div>
 
-                    <div className="dict-card-footer">
-                      <button className="btn btn-ghost btn-sm dict-delete-btn" onClick={() => handleDelete(entry.id)}>
-                        Delete Word
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <button className="btn btn-ghost btn-sm dict-page-nav" onClick={() => goToPage(page + 1)} disabled={page === totalPages}>
+            Next →
+          </button>
         </div>
       )}
     </div>

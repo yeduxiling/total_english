@@ -613,3 +613,156 @@
     gap: 8px;
   }
 }
+
+/* ── Chunk Card (meaning as primary unit) ─────────────────────────────────── */
+.chunk-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition-fast);
+  border-radius: var(--radius-md);
+}
+
+.chunk-card-header:hover {
+  background: var(--color-bg-secondary);
+}
+
+.chunk-word-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  min-width: 160px;
+}
+
+.chunk-header-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chunk-meaning-preview {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.chunk-card.expanded .chunk-meaning-preview {
+  display: none;
+}
+
+.chunk-encounter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(251, 146, 60, 0.1);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  color: #f97316;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chunk-speak-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-3);
+}
+
+.chunk-speak-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* Search clear button */
+.dict-search-wrap {
+  position: relative;
+}
+
+.dict-search-clear {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.dict-search-clear:hover {
+  color: var(--color-text-primary);
+}
+
+/* ── Pagination ────────────────────────────────────────────────────────────── */
+.dict-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  flex-wrap: wrap;
+}
+
+.dict-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.dict-page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dict-page-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.dict-page-btn.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+  font-weight: var(--font-semibold);
+}
+
+.dict-page-ellipsis {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  padding: 0 var(--space-1);
+}
+
+.dict-page-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

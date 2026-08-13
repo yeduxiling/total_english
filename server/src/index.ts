@@ -10,6 +10,7 @@ import reviewRouter from './routes/review.js';
 import ttsRouter from './routes/tts.js';
 import sentenceRouter from './routes/sentence.js';
 import expressRouter from './routes/express.js';
+import tagsRouter from './routes/tags.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -31,6 +32,7 @@ app.use('/api/review', reviewRouter);
 app.use('/api/tts', ttsRouter);
 app.use('/api/sentences', sentenceRouter);
 app.use('/api/express', expressRouter);
+app.use('/api/tags', tagsRouter);
 
 // 健康检查
 app.get('/api/health', (_req, res) => {

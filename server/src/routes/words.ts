@@ -358,6 +358,119 @@ router.put('/examples/:exampleId', (req, res) => {
   }
 });
 
+// GET /api/words/meanings - 分页获取 meaning chunk 列表（以 meaning 为主单元）
+router.get('/meanings', (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page as string)  || 1);
+  const limit  = Math.min(50, parseInt(req.query.limit as string) || 20);
+  const sort   = (req.query.sort   as string) || 'time-desc';
+  const search = ((req.query.search as string) || '').trim();
+  const filter = (req.query.filter as string) || 'all';
+  const offset = (page - 1) * limit;
+
+  const db = getDb();
+
+  // 动态拼 WHERE
+  const conditions: string[] = [];
+  const params: any[]        = [];
+
+  if (search) {
+    conditions.push('(w.word LIKE ? OR m.contextual_meaning LIKE ?)');
+    params.push(`%${search}%`, `%${search}%`);
+  }
+  if (filter === 'word')   conditions.push("w.word NOT LIKE '% %'");
+  if (filter === 'phrase') conditions.push("w.word LIKE '% %'");
+
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+  const orderMap: Record<string, string> = {
+    'time-desc':       'ORDER BY m.created_at DESC',
+    'time-asc':        'ORDER BY m.created_at ASC',
+    'alpha-asc':       'ORDER BY w.word ASC, m.created_at DESC',
+    'alpha-desc':      'ORDER BY w.word DESC, m.created_at DESC',
+    'encounters-desc': 'ORDER BY example_count DESC, m.created_at DESC',
+  };
+  const order = orderMap[sort] || orderMap['time-desc'];
+
+  const coreSql = `
+    FROM meanings m
+    JOIN words w ON m.word_id = w.id
+    LEFT JOIN examples e ON e.meaning_id = m.id
+    ${where}
+    GROUP BY m.id
+  `;
+
+  try {
+    const total = (db.prepare(`SELECT COUNT(*) as c FROM (SELECT m.id ${coreSql})`)
+      .get(...params) as any).c as number;
+
+    const rows = db.prepare(`
+      SELECT
+        m.id          AS meaning_id,
+        m.word_id,
+        m.contextual_meaning,
+        m.synonyms,
+        m.collocations,
+        m.created_at  AS meaning_created_at,
+        w.word,
+        w.phonetic,
+        w.part_of_speech,
+        COUNT(e.id)   AS example_count
+      ${coreSql}
+      ${order}
+      LIMIT ? OFFSET ?
+    `).all(...params, limit, offset) as any[];
+
+    const getExamples = db.prepare(
+      'SELECT id, sentence, source, added_at FROM examples WHERE meaning_id = ? ORDER BY added_at'
+    );
+
+    const data = rows.map(r => ({
+      meaning_id:        r.meaning_id,
+      word_id:           r.word_id,
+      word:              r.word,
+      phonetic:          r.phonetic,
+      part_of_speech:    r.part_of_speech,
+      contextual_meaning: r.contextual_meaning,
+      synonyms:          r.synonyms    ? JSON.parse(r.synonyms)    : [],
+      collocations:      r.collocations ? JSON.parse(r.collocations) : [],
+      example_count:     r.example_count,
+      examples:          getExamples.all(r.meaning_id),
+    }));
+
+    res.json({ data, total, page, limit, totalPages: Math.ceil(total / limit) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/words/meanings/:meaningId - 删除单个 meaning（word 若孤立则一并删除）
+router.delete('/meanings/:meaningId', (req, res) => {
+  const { meaningId } = req.params;
+  const db = getDb();
+  try {
+    const meaning = db.prepare('SELECT word_id FROM meanings WHERE id = ?').get(meaningId) as any;
+    if (!meaning) return res.status(404).json({ error: 'Meaning not found' });
+
+    const transaction = db.transaction(() => {
+      // foreign_keys = ON + ON DELETE CASCADE 自动删除 examples / variants / review_logs
+      db.prepare('DELETE FROM meanings WHERE id = ?').run(meaningId);
+
+      // 若该词已无任何 meaning，则删掉 word
+      const remaining = (db.prepare(
+        'SELECT COUNT(*) as c FROM meanings WHERE word_id = ?'
+      ).get(meaning.word_id) as any).c;
+      if (remaining === 0) {
+        db.prepare('DELETE FROM words WHERE id = ?').run(meaning.word_id);
+      }
+    });
+
+    transaction();
+    res.json({ message: 'Meaning deleted' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/words/meanings/:meaningId/variants - 获取某含义的所有释义版本
 router.get('/meanings/:meaningId/variants', (req, res) => {
   const db = getDb();
