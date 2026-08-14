@@ -12,12 +12,6 @@ interface Example {
   added_at: string;
 }
 
-interface MeaningVariant {
-  id: string;
-  contextual_meaning: string;
-  is_selected: number;
-}
-
 interface MeaningChunk {
   meaning_id: string;
   word_id: number;
@@ -54,37 +48,14 @@ function MeaningChunkCard({
   onDelete: (meaningId: string) => void;
 }) {
   const [expanded, setExpanded]       = useState(false);
-  const [variants, setVariants]       = useState<MeaningVariant[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isRerolling, setIsRerolling] = useState(false);
-  const [loaded, setLoaded]           = useState(false);
+  const [currentMeaning, setCurrentMeaning] = useState(chunk.contextual_meaning);
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editSourceText, setEditSourceText]     = useState('');
   const [savingExampleId, setSavingExampleId]   = useState<string | null>(null);
   const [localExamples, setLocalExamples]       = useState<Example[]>(chunk.examples);
 
-  // 展开时懒加载 variants
-  useEffect(() => {
-    if (!expanded || loaded) return;
-    fetch(`/api/words/meanings/${chunk.meaning_id}/variants`)
-      .then(r => r.json())
-      .then((data: MeaningVariant[]) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setVariants(data);
-          const sel = data.findIndex(v => v.is_selected === 1);
-          setCurrentIndex(sel >= 0 ? sel : 0);
-        } else {
-          setVariants([{ id: 'default', contextual_meaning: chunk.contextual_meaning, is_selected: 1 }]);
-        }
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, [expanded, loaded, chunk.meaning_id, chunk.contextual_meaning]);
-
-  const currentVariant = variants[currentIndex];
-  const displayMeaning = loaded && currentVariant
-    ? currentVariant.contextual_meaning
-    : chunk.contextual_meaning;
+  const displayMeaning = currentMeaning;
 
   const handleReroll = async () => {
     if (isRerolling) return;
@@ -94,30 +65,21 @@ function MeaningChunkCard({
       const res = await fetch('/api/reroll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: chunk.word, sentence, previousMeanings: variants.map(v => v.contextual_meaning) }),
+        body: JSON.stringify({ word: chunk.word, sentence, previousMeanings: [currentMeaning] }),
       });
       if (!res.ok) throw new Error('Reroll failed');
       const data = await res.json();
+      // 添加 variant 并自动 select
       const addRes = await fetch(`/api/words/meanings/${chunk.meaning_id}/variants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: chunk.word, sentence, contextualMeaning: data.contextualMeaning }),
       });
       const addData = await addRes.json();
-      const next = [...variants, { id: addData.id, contextual_meaning: data.contextualMeaning, is_selected: 0 }];
-      setVariants(next);
-      setCurrentIndex(next.length - 1);
+      await fetch(`/api/words/meanings/${chunk.meaning_id}/variants/${addData.id}/select`, { method: 'PUT' });
+      setCurrentMeaning(data.contextualMeaning);
     } catch (e) { console.error(e); }
     finally { setIsRerolling(false); }
-  };
-
-  const handleSelectVariant = async () => {
-    const v = variants[currentIndex];
-    if (!v || v.id === 'default' || v.is_selected === 1) return;
-    try {
-      await fetch(`/api/words/meanings/${chunk.meaning_id}/variants/${v.id}/select`, { method: 'PUT' });
-      setVariants(variants.map(x => ({ ...x, is_selected: x.id === v.id ? 1 : 0 })));
-    } catch (e) { console.error(e); }
   };
 
   const handleSaveSource = async (exId: string, text: string) => {
@@ -144,6 +106,9 @@ function MeaningChunkCard({
       {/* ── Header (always visible, click to expand) ── */}
       <div className="chunk-card-header" onClick={() => setExpanded(e => !e)}>
         <div className="chunk-word-info">
+          <span className="chunk-header-speak" onClick={e => e.stopPropagation()}>
+            <SpeakButton wordId={chunk.word_id} size="sm" />
+          </span>
           <span className="dict-word font-english">{chunk.word}</span>
           {chunk.phonetic && <span className="dict-phonetic font-mono">{chunk.phonetic}</span>}
           {chunk.part_of_speech && <span className="dict-pos">{chunk.part_of_speech}</span>}
@@ -164,40 +129,21 @@ function MeaningChunkCard({
       {/* ── Expanded body ── */}
       {expanded && (
         <div className="dict-card-body">
-          {/* Speak button row */}
-          <div className="chunk-speak-row">
-            <SpeakButton wordId={chunk.word_id} size="sm" />
-            <span className="chunk-speak-label">Listen to pronunciation</span>
-          </div>
-
           <div className="dict-meaning-block">
-            <p className="dict-meaning-text">{displayMeaning}</p>
-
-            {/* Reroll controls */}
-            {loaded && localExamples.length > 0 && (
-              <div className="reroll-controls" style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div className="reroll-nav" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <button className="btn-icon" onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0}>◀</button>
-                  <span className="reroll-counter" style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', minWidth: 40, textAlign: 'center' }}>
-                    {currentIndex + 1} / {variants.length}
-                  </span>
-                  <button className="btn-icon" onClick={() => setCurrentIndex(i => i + 1)} disabled={currentIndex === variants.length - 1}>▶</button>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {currentVariant && currentVariant.is_selected === 0 && currentVariant.id !== 'default' && (
-                    <button className="btn btn-primary btn-sm" onClick={handleSelectVariant}>✓ Use this</button>
-                  )}
-                  <button
-                    className={`btn btn-secondary btn-sm reroll-btn ${isRerolling ? 'loading' : ''}`}
-                    onClick={handleReroll}
-                    disabled={isRerolling}
-                  >
-                    <span className="reroll-icon">🎲</span>
-                    {isRerolling ? 'Rolling...' : 'Roll'}
-                  </button>
-                </div>
-              </div>
-            )}
+            <div className="dict-meaning-row">
+              <p className="dict-meaning-text">{displayMeaning}</p>
+              {localExamples.length > 0 && (
+                <button
+                  className={`btn btn-ghost btn-sm reroll-btn ${isRerolling ? 'loading' : ''}`}
+                  onClick={handleReroll}
+                  disabled={isRerolling}
+                  title="Re-roll meaning explanation"
+                >
+                  <span className="reroll-icon">🎲</span>
+                  {isRerolling ? '...' : 'Roll'}
+                </button>
+              )}
+            </div>
 
             {/* Synonyms */}
             {chunk.synonyms.length > 0 && (
