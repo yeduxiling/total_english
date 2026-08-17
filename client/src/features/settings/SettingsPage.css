@@ -359,7 +359,26 @@
 .llm-test-result.error {
   color: var(--color-error);
   background: rgba(239, 68, 68, 0.08);
-  cursor: help;
+}
+
+.llm-test-error-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 360px;
+}
+
+.llm-test-error-detail {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-error);
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  word-break: break-word;
+  text-align: right;
 }
 
 /* 测试按钟 */

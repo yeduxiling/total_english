@@ -128,6 +128,7 @@ router.post('/models/:id/test', async (req, res) => {
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
+    console.log(`🧪 [Test] Sending request to: ${apiUrl} | model: ${model.model_id}`);
     const response = await fetch(apiUrl, {
       method: 'POST',
       signal: controller.signal,
@@ -138,7 +139,7 @@ router.post('/models/:id/test', async (req, res) => {
       body: JSON.stringify({
         model: model.model_id,
         messages: [{ role: 'user', content: 'Reply with the single word: OK' }],
-        max_tokens: 32,   // 适当放大，避免 reasoning 前缀被截断导致 content 为空
+        max_tokens: 128,   // 适当放大，避免 reasoning 模型消耗所有 token 导致 content 为空
         temperature: 0,
       }),
     });
@@ -149,7 +150,7 @@ router.post('/models/:id/test', async (req, res) => {
     if (!response.ok) {
       const errorText = await response.text();
       let cleanError = errorText;
-      // 优先解析 JSON 错误体（OpenAI / DeepSeek 风格）
+      // 优先解析 JSON 错误体（OpenAI / DeepSeek / GLM 风格）
       try {
         const errJson = JSON.parse(errorText);
         const msg = errJson?.error?.message || errJson?.message;
@@ -160,17 +161,26 @@ router.post('/models/:id/test', async (req, res) => {
         const titleMatch = errorText.match(/<title>(.*?)<\/title>/i);
         cleanError = titleMatch?.[1]?.trim() || errorText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 120);
       }
-      return res.json({ ok: false, error: `HTTP ${response.status}: ${cleanError}`, latency });
+      return res.json({ ok: false, error: `HTTP ${response.status}: ${cleanError}`, latency, requestUrl: apiUrl });
     }
 
     const data = await response.json() as any;
+    // 兼容多种模型响应结构：优先取 content，回退取 reasoning_content
     const content = data.choices?.[0]?.message?.content;
+    const reasoningContent = data.choices?.[0]?.message?.reasoning_content;
+    const finalContent = content || reasoningContent;
+
     // 严格判空：undefined / null / 纯空字符串均视为失败
-    if (content === undefined || content === null || String(content).trim() === '') {
-      return res.json({ ok: false, error: 'Model returned empty content', latency });
+    if (finalContent === undefined || finalContent === null || String(finalContent).trim() === '') {
+      return res.json({
+        ok: false,
+        error: 'Model returned empty content. The model may require a higher max_tokens value, or uses an unsupported response format.',
+        latency,
+        requestUrl: apiUrl,
+      });
     }
 
-    return res.json({ ok: true, latency, reply: String(content).trim() });
+    return res.json({ ok: true, latency, reply: String(finalContent).trim() });
   } catch (err: any) {
     clearTimeout(timeoutId);
     const latency = Date.now() - startTime;
@@ -179,6 +189,7 @@ router.post('/models/:id/test', async (req, res) => {
       ok: false,
       error: isTimeout ? 'Request timed out (15s)' : (err.message || 'Network connection failed'),
       latency,
+      requestUrl: apiUrl,
     });
   }
 });

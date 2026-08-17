@@ -383,3 +383,173 @@
     margin-left: var(--space-3);
   }
 }
+
+/* ─── Collapsible Analysis Detail Panel ─── */
+
+.analysis-collapse-section {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+.analysis-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: var(--font-semibold);
+  color: var(--color-accent);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+
+.analysis-toggle-btn:hover {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.toggle-icon {
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.analysis-detail-panel {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-input);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.analysis-section-title {
+  font-size: 13px;
+  font-weight: var(--font-bold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 var(--space-3) 0;
+}
+
+/* Mini Chunk List */
+.mini-chunk-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mini-chunk-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-border);
+}
+
+.mini-chunk-item.sub-chunk {
+  margin-left: 20px;
+  border-left-style: dashed;
+  opacity: 0.9;
+}
+
+.mini-chunk-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+  width: fit-content;
+}
+
+/* Badge colors (synced with SentenceAnalysisPage) */
+.mini-chunk-badge.badge-primary {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--color-accent);
+}
+.mini-chunk-badge.badge-danger {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-danger, #ef4444);
+}
+.mini-chunk-badge.badge-warning {
+  background: rgba(245, 158, 11, 0.08);
+  color: #d97706;
+}
+.mini-chunk-badge.badge-info {
+  background: rgba(6, 182, 212, 0.08);
+  color: #0891b2;
+}
+.mini-chunk-badge.badge-success {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+}
+.mini-chunk-badge.badge-secondary {
+  background: var(--color-bg-input);
+  color: var(--color-text-secondary);
+}
+
+.mini-chunk-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.mini-chunk-explanation {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Overall Meaning */
+.mini-overall-meaning {
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--color-bg-card);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* Collocation List */
+.mini-collocation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mini-collocation-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.mini-collocation-bullet {
+  flex-shrink: 0;
+  font-size: 14px;
+  margin-top: 1px;
+}
+
+.mini-collocation-point {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.mini-collocation-explanation {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 4px 0 0 0;
+  line-height: 1.5;
+}

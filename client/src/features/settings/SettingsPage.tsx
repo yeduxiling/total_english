@@ -250,14 +250,17 @@ export default function SettingsPage() {
       if (data.ok) {
         setTestingStates(prev => ({ ...prev, [id]: { status: 'ok', latency: data.latency } }));
       } else {
-        setTestingStates(prev => ({ ...prev, [id]: { status: 'error', msg: data.error } }));
+        const errorMsg = data.requestUrl
+          ? `${data.error}\n→ ${data.requestUrl}`
+          : data.error;
+        setTestingStates(prev => ({ ...prev, [id]: { status: 'error', msg: errorMsg } }));
       }
     } catch (err: any) {
       setTestingStates(prev => ({ ...prev, [id]: { status: 'error', msg: err.message || 'Request failed' } }));
     }
     setTimeout(() => {
       setTestingStates(prev => ({ ...prev, [id]: { status: 'idle' } }));
-    }, 5000);
+    }, 15000);
   };
 
   const handleDeleteLLM = async (id: string) => {
@@ -350,7 +353,10 @@ export default function SettingsPage() {
                             <span className="llm-test-result ok">✔ Connected ({ts.latency}ms)</span>
                           )}
                           {ts.status === 'error' && (
-                            <span className="llm-test-result error" title={ts.msg}>✖ Failed</span>
+                            <div className="llm-test-error-block">
+                              <span className="llm-test-result error">✖ Failed</span>
+                              {ts.msg && <div className="llm-test-error-detail">{ts.msg}</div>}
+                            </div>
                           )}
                           <div className="llm-card-actions">
                             <button

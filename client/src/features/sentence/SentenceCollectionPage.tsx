@@ -4,14 +4,30 @@ import SpeakButton from '../../components/SpeakButton/SpeakButton.js';
 import SourceAutocomplete from '../../components/SourceAutocomplete.js';
 import './SentenceCollectionPage.css';
 
+interface Chunk {
+  label: string;
+  text: string;
+  explanation: string;
+  level: number;
+}
 
+interface CollocationOrDifficulty {
+  point: string;
+  explanation: string;
+}
+
+interface AnalysisData {
+  chunks: Chunk[];
+  overallMeaning: string;
+  collocationsAndDifficulties?: CollocationOrDifficulty[];
+}
 
 interface SentenceItem {
   id: number;
   sentence: string;
   source: string; // 'analysis' | 'manual'
   source_tag: string | null;
-  analysis_result: unknown;
+  analysis_result: AnalysisData | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -33,6 +49,32 @@ export default function SentenceCollectionPage() {
   const [editText, setEditText] = useState('');
   const [editSourceTagText, setEditSourceTagText] = useState('');
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+
+  // 分析详情展开状态
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  const toggleExpand = (id: number) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const getBadgeColorClass = (label: string | undefined): string => {
+    if (!label) return 'badge-secondary';
+    const l = label.toLowerCase();
+    if (l.includes('prohibition') || l.includes('negation') || l.includes('avoid')) return 'badge-danger';
+    if (l.includes('core') || l.includes('action') || l.includes('subject')) return 'badge-primary';
+    if (l.includes('condition') || l.includes('if') || l.includes('unless')) return 'badge-warning';
+    if (l.includes('purpose') || l.includes('consequence') || l.includes('result')) return 'badge-info';
+    if (l.includes('context') || l.includes('location') || l.includes('time')) return 'badge-success';
+    return 'badge-secondary';
+  };
 
 
 
@@ -315,6 +357,68 @@ export default function SentenceCollectionPage() {
                 )}
               </div>
 
+              {/* 可折叠的分析详情 */}
+              {item.analysis_result && item.source === 'analysis' && editingId !== item.id && (
+                <div className="analysis-collapse-section">
+                  <button
+                    className={`analysis-toggle-btn ${expandedIds.has(item.id) ? 'expanded' : ''}`}
+                    onClick={() => toggleExpand(item.id)}
+                  >
+                    <span className="toggle-icon">{expandedIds.has(item.id) ? '▾' : '▸'}</span>
+                    <span className="toggle-text">{expandedIds.has(item.id) ? 'Hide Analysis' : 'View Analysis'}</span>
+                  </button>
+
+                  {expandedIds.has(item.id) && (
+                    <div className="analysis-detail-panel fade-in">
+                      {/* 意群分析 */}
+                      {item.analysis_result.chunks && item.analysis_result.chunks.length > 0 && (
+                        <div className="analysis-section">
+                          <h4 className="analysis-section-title">Logical Chunking</h4>
+                          <div className="mini-chunk-list">
+                            {item.analysis_result.chunks.map((chunk, idx) => (
+                              <div key={idx} className={`mini-chunk-item ${chunk.level > 0 ? 'sub-chunk' : ''}`}>
+                                <span className={`mini-chunk-badge ${getBadgeColorClass(chunk.label)}`}>
+                                  {chunk.label}
+                                </span>
+                                <strong className="mini-chunk-text">{chunk.text}</strong>
+                                <p className="mini-chunk-explanation">{chunk.explanation}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 整体含义 */}
+                      {item.analysis_result.overallMeaning && (
+                        <div className="analysis-section">
+                          <h4 className="analysis-section-title">Overall Meaning</h4>
+                          <blockquote className="mini-overall-meaning">
+                            {item.analysis_result.overallMeaning}
+                          </blockquote>
+                        </div>
+                      )}
+
+                      {/* 搭配与难点 */}
+                      {item.analysis_result.collocationsAndDifficulties && item.analysis_result.collocationsAndDifficulties.length > 0 && (
+                        <div className="analysis-section">
+                          <h4 className="analysis-section-title">Collocations & Difficulties</h4>
+                          <div className="mini-collocation-list">
+                            {item.analysis_result.collocationsAndDifficulties.map((c, idx) => (
+                              <div key={idx} className="mini-collocation-item">
+                                <span className="mini-collocation-bullet">📌</span>
+                                <div>
+                                  <strong className="mini-collocation-point">{c.point}</strong>
+                                  <p className="mini-collocation-explanation">{c.explanation}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
             </div>
           ))}
