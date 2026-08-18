@@ -20,7 +20,7 @@ interface WebPageItem {
 
 export default function WebHomePage() {
   const navigate = useNavigate();
-  const [importMode, setImportMode] = useState<'url' | 'paste'>('url');
+  const [importMode, setImportMode] = useState<'url' | 'paste' | 'clipper'>('url');
   
   // URL 模式状态
   const [urlInput, setUrlInput] = useState('');
@@ -48,7 +48,7 @@ export default function WebHomePage() {
     fetchRecentPages();
   }, []);
 
-  // 提交 URL 导入并直接进入阅读
+  // 1. URL 导入
   const handleImportByUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!urlInput.trim()) return;
@@ -66,13 +66,13 @@ export default function WebHomePage() {
       setUrlInput('');
       navigate(`/reading/web/read/${created.id}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch webpage. For complex LMS or login-required pages, try "Paste Content" tab!');
+      setError(err.message || 'Failed to fetch webpage. For complex LMS or login-required pages, try "1-Click Clipper" or "Paste Content"!');
     } finally {
       setLoading(false);
     }
   };
 
-  // 提交粘贴内容直接进入阅读
+  // 2. 粘贴内容导入
   const handleImportByPaste = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pasteContent.trim()) return;
@@ -102,6 +102,18 @@ export default function WebHomePage() {
     }
   };
 
+  // 监听富文本粘贴事件（保留复制的图片和 HTML 标签）
+  const handlePasteEvent = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const html = e.clipboardData.getData('text/html');
+    if (html && html.trim()) {
+      e.preventDefault();
+      setPasteContent(html);
+    }
+  };
+
+  // 生成 Bookmarklet 脚本代码
+  const bookmarkletCode = `javascript:(function(){try{document.querySelectorAll('details').forEach(d=>d.setAttribute('open','true'));document.querySelectorAll('[aria-expanded=\"false\"]').forEach(el=>{el.setAttribute('aria-expanded','true');el.removeAttribute('hidden');if(el.classList.contains('collapsed'))el.classList.remove('collapsed');if(el.classList.contains('collapse')&&!el.classList.contains('show'))el.classList.add('show');});document.querySelectorAll('.accordion-body,.panel-collapse,.collapse').forEach(el=>{el.style.display='block';el.style.height='auto';});let contentEl=document.querySelector('main,article,[role=\"main\"],#content,.course-content,.lesson-content,.content,body');if(!contentEl)contentEl=document.body;const clone=contentEl.cloneNode(true);clone.querySelectorAll('script,style,noscript,nav,header,footer,.sidebar,#sidebar').forEach(el=>el.remove());clone.querySelectorAll('img').forEach(img=>{if(img.src)img.src=img.src;});const payload={title:document.title||'Clipped Article',url:window.location.href,contentHtml:clone.innerHTML,siteName:window.location.hostname.replace(/^www\\./,'')};const targetBase='http://localhost:3001';fetch(targetBase+'/api/webpages/clip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()).then(data=>{if(data&&data.id){window.open('http://localhost:5173/reading/web/read/'+data.id,'_blank');}else{alert('Clipped successfully!');}}).catch(err=>{alert('Failed to connect to Total English on localhost:3001. Please make sure the app is running!');});}catch(e){alert('Error clipping page: '+e.message);}})();`;
+
   return (
     <div className="web-home-page animate-in">
       {/* Header */}
@@ -123,7 +135,7 @@ export default function WebHomePage() {
       {/* 二级页签 */}
       <ReadingNavTabs />
 
-      {/* 导入卡片 (支持 URL 与 粘贴内容双模式) */}
+      {/* 导入卡片 (支持 URL / 1-Click Clipper / 粘贴内容 3 种模式) */}
       <div className="web-import-card card">
         <div className="web-import-header-row">
           <div className="web-import-header-left">
@@ -145,6 +157,13 @@ export default function WebHomePage() {
             </button>
             <button
               type="button"
+              className={`mode-switch-btn ${importMode === 'clipper' ? 'active' : ''}`}
+              onClick={() => { setImportMode('clipper'); setError(''); }}
+            >
+              🚀 1-Click Clipper (LMS & 折叠)
+            </button>
+            <button
+              type="button"
               className={`mode-switch-btn ${importMode === 'paste' ? 'active' : ''}`}
               onClick={() => { setImportMode('paste'); setError(''); }}
             >
@@ -153,7 +172,7 @@ export default function WebHomePage() {
           </div>
         </div>
 
-        {importMode === 'url' ? (
+        {importMode === 'url' && (
           <form className="web-import-form" onSubmit={handleImportByUrl}>
             <div className="web-input-wrapper">
               <input
@@ -181,10 +200,52 @@ export default function WebHomePage() {
               </button>
             </div>
             <p className="import-hint-text">
-              💡 Works great with blogs, Medium, BBC, Substack, News, Wikipedia, etc.
+              💡 Best for publicly available blogs, Medium, Substack, News, Wikipedia, Tech docs, etc.
             </p>
           </form>
-        ) : (
+        )}
+
+        {importMode === 'clipper' && (
+          <div className="clipper-guide-panel">
+            <div className="clipper-badge-box">
+              <span className="clipper-step-number">Step 1</span>
+              <p className="clipper-step-desc">
+                Drag this bookmark button to your browser's <strong>Bookmark Bar (书签栏)</strong> (just once):
+              </p>
+              <div className="clipper-draggable-wrap">
+                <a
+                  href={bookmarkletCode}
+                  className="clipper-bookmark-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    alert('Please drag and drop this button to your browser bookmark bar (书签栏) to use it on any webpage!');
+                  }}
+                  title="Drag this button to your bookmark bar"
+                >
+                  🔖 Save to Total English
+                </a>
+                <span className="clipper-drag-hint">← Drag this to bookmarks bar</span>
+              </div>
+            </div>
+
+            <div className="clipper-steps-list">
+              <div className="clipper-step-item">
+                <span className="clipper-step-number">Step 2</span>
+                <p className="clipper-step-desc">
+                  Open any complex page (like <strong>Shopify Academy, Coursera, or login-required course</strong>).
+                </p>
+              </div>
+              <div className="clipper-step-item">
+                <span className="clipper-step-number">Step 3</span>
+                <p className="clipper-step-desc">
+                  Click the <strong>"Save to Total English"</strong> bookmark! It will <strong>automatically expand all folded accordions, grab all images, and launch the reader instantly!</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {importMode === 'paste' && (
           <form className="web-import-form" onSubmit={handleImportByPaste}>
             <div className="paste-form-fields">
               <input
@@ -197,9 +258,10 @@ export default function WebHomePage() {
               />
               <textarea
                 className="paste-content-textarea"
-                placeholder="Paste the article text or webpage content here (supports full paragraphs, lists, and sections)..."
+                placeholder="Paste the article text or webpage content here (supports rich HTML paste with pictures, lists, and tables)..."
                 value={pasteContent}
                 onChange={(e) => setPasteContent(e.target.value)}
+                onPaste={handlePasteEvent}
                 rows={6}
                 disabled={loading}
                 required
@@ -241,7 +303,7 @@ export default function WebHomePage() {
           <div className="web-home-empty card">
             <div className="web-home-empty-icon">📰</div>
             <p className="web-home-empty-text">No web articles yet</p>
-            <p className="web-home-empty-hint">Paste an article URL or text above to start reading</p>
+            <p className="web-home-empty-hint">Use URL import, 1-Click Clipper, or paste content above to start reading</p>
           </div>
         ) : (
           <div className="web-home-recent-grid">

@@ -6,6 +6,52 @@ import { parseWebArticle } from '../services/webParser.js';
 export const webpagesRouter = Router();
 
 /**
+ * 0. 浏览器一键剪藏 (Web Clipper / Bookmarklet 接收接口)
+ * POST /api/webpages/clip { title, contentHtml, url, byline?, siteName?, coverImage? }
+ */
+webpagesRouter.post('/clip', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { title, contentHtml, url, byline, siteName, coverImage } = req.body;
+    if (!contentHtml || typeof contentHtml !== 'string') {
+      res.status(400).json({ error: 'Content HTML is required.' });
+      return;
+    }
+
+    const { createCustomWebArticle } = await import('../services/webParser.js');
+    const parsed = createCustomWebArticle(title || 'Clipped Article', contentHtml, url, byline);
+
+    const db = getDb();
+    const pageId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO web_pages (
+        id, url, title, byline, site_name, excerpt, content_html, text_content, cover_image,
+        reading_progress, estimated_reading_minutes, last_read_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).run(
+      pageId,
+      url || 'clip://' + pageId,
+      parsed.title,
+      parsed.byline,
+      siteName || parsed.siteName,
+      parsed.excerpt,
+      parsed.contentHtml,
+      parsed.textContent,
+      coverImage || parsed.coverImage,
+      parsed.estimatedReadingMinutes,
+      now
+    );
+
+    const created = db.prepare('SELECT * FROM web_pages WHERE id = ?').get(pageId);
+    res.status(201).json(created);
+  } catch (err: any) {
+    console.error('Failed to clip webpage:', err);
+    res.status(500).json({ error: err.message || 'Failed to save clipped webpage.' });
+  }
+});
+
+/**
  * 1. 仅解析网页 (用于前端预览或校验)
  * POST /api/webpages/parse { url }
  */
