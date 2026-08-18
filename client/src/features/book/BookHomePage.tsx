@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeFetchJson } from '../../utils/api.js';
 import { getMainTitle } from '../../utils/bookTitle.js';
+import ReadingNavTabs from '../reading/ReadingNavTabs.js';
 import './BookHomePage.css';
 
 interface Book {
@@ -35,17 +36,20 @@ export default function BookHomePage() {
           <div>
             <h1 className="page-title">
               <span className="page-title-icon">📚</span>
-              Book
+              Reading
             </h1>
             <p className="page-subtitle">Read English books and build your vocabulary naturally</p>
           </div>
           <div className="book-home-actions">
-            <span className="book-home-link" onClick={() => navigate('/book/shelf')}>My Shelf</span>
+            <span className="book-home-link" onClick={() => navigate('/reading/books/shelf')}>My Shelf</span>
             <span className="book-home-link-divider">·</span>
-            <span className="book-home-link" onClick={() => navigate('/book/upload')}>Upload Book</span>
+            <span className="book-home-link" onClick={() => navigate('/reading/books/upload')}>Upload Book</span>
           </div>
         </div>
       </div>
+
+      {/* 二级页签 */}
+      <ReadingNavTabs />
 
       {/* Recent Reading */}
       <div className="book-home-section">
@@ -71,7 +75,7 @@ export default function BookHomePage() {
               <div
                 key={book.id}
                 className="book-card card"
-                onClick={() => navigate(`/book/read/${book.id}`)}
+                onClick={() => navigate(`/reading/books/read/${book.id}`)}
               >
                 <div className="book-card-cover">
                   {book.cover_path ? (

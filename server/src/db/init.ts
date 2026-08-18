@@ -196,6 +196,52 @@ export function initDatabase(): void {
       FOREIGN KEY (highlight_id) REFERENCES book_highlights(id) ON DELETE SET NULL
     );
     CREATE INDEX IF NOT EXISTS idx_book_notes_book ON book_notes(book_id);
+
+    -- 网页文章主表 (Web Articles / Internet Pages)
+    CREATE TABLE IF NOT EXISTS web_pages (
+      id TEXT PRIMARY KEY,
+      url TEXT NOT NULL,
+      title TEXT NOT NULL,
+      byline TEXT,
+      site_name TEXT,
+      excerpt TEXT,
+      content_html TEXT NOT NULL,
+      text_content TEXT,
+      cover_image TEXT,
+      reading_progress REAL DEFAULT 0,
+      estimated_reading_minutes INTEGER DEFAULT 1,
+      last_read_at TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_web_pages_url ON web_pages(url);
+    CREATE INDEX IF NOT EXISTS idx_web_pages_last_read ON web_pages(last_read_at);
+
+    -- 网页文章划线高亮表
+    CREATE TABLE IF NOT EXISTS web_page_highlights (
+      id TEXT PRIMARY KEY,
+      page_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT 'yellow',
+      range_info TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (page_id) REFERENCES web_pages(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_web_highlights_page ON web_page_highlights(page_id);
+
+    -- 网页文章笔记/想法表
+    CREATE TABLE IF NOT EXISTS web_page_notes (
+      id TEXT PRIMARY KEY,
+      page_id TEXT NOT NULL,
+      highlight_id TEXT,
+      referenced_text TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (page_id) REFERENCES web_pages(id) ON DELETE CASCADE,
+      FOREIGN KEY (highlight_id) REFERENCES web_page_highlights(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_web_notes_page ON web_page_notes(page_id);
   `);
 
   // 动态升级 sentences 表，添加 source_tag 字段

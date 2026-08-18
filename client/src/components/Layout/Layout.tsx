@@ -26,29 +26,44 @@ const navItems: NavItem[] = [
       { path: '/sentence/collection', icon: '📂', label: 'Collection' },
     ]
   },
+  {
+    label: 'Reading',
+    icon: '📚',
+    children: [
+      { path: '/reading/books', icon: '📖', label: 'Books' },
+      { path: '/reading/web', icon: '🌐', label: 'Internet Pages' },
+    ]
+  },
   { path: '/review', icon: '🧠', label: 'Review' },
   { path: '/phonetic', icon: '🗣️', label: 'Phonetic' },
   { path: '/express', icon: '✍️', label: 'Express' },
-  { path: '/book', icon: '📚', label: 'Book' },
   { path: '/settings', icon: '⚙️', label: 'Settings' },
 ];
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const isSentenceRoute = location.pathname.startsWith('/sentence');
-  
-  // 使用 userExpanded 记录用户手动展开/折叠状态。null 表示跟随路由默认逻辑。
-  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
 
-  // 当路径改变时，重置用户手动干预状态，恢复路由默认
-  const [prevPath, setPrevPath] = useState(location.pathname);
-  if (location.pathname !== prevPath) {
-    setPrevPath(location.pathname);
-    setUserExpanded(null);
-  }
+  // 记录各个 group 用户手动展开/折叠状态
+  const [expandedGroups, setExpandedGroups] = useState<{ [label: string]: boolean }>({});
 
-  const isExpanded = userExpanded !== null ? userExpanded : isSentenceRoute;
+  const isGroupActive = (item: NavItem): boolean => {
+    if (!item.children) return false;
+    return item.children.some(c => location.pathname.startsWith(c.path));
+  };
+
+  const isGroupExpanded = (item: NavItem): boolean => {
+    if (expandedGroups[item.label] !== undefined) {
+      return expandedGroups[item.label];
+    }
+    return isGroupActive(item);
+  };
+
+  const toggleGroup = (label: string, item: NavItem) => {
+    const current = isGroupExpanded(item);
+    setExpandedGroups(prev => ({ ...prev, [label]: !current }));
+  };
+
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
@@ -86,19 +101,21 @@ export default function Layout() {
         <nav className="sidebar-nav">
           {navItems.map((item, index) => {
             if (item.children) {
+              const active = isGroupActive(item);
+              const expanded = isGroupExpanded(item);
               return (
-                <div key={index} className={`nav-item-group ${isExpanded ? 'expanded' : ''}`}>
+                <div key={index} className={`nav-item-group ${expanded ? 'expanded' : ''}`}>
                   <button
-                    className={`nav-item-trigger ${isSentenceRoute ? 'active' : ''}`}
-                    onClick={() => setUserExpanded(!isExpanded)}
+                    className={`nav-item-trigger ${active ? 'active' : ''}`}
+                    onClick={() => toggleGroup(item.label, item)}
                   >
                     <div className="nav-item-trigger-left">
                       <span className="nav-icon">{item.icon}</span>
                       <span className="nav-label">{item.label}</span>
                     </div>
-                    <span className="nav-arrow" style={{ transform: isExpanded ? 'rotate(90deg)' : 'none' }}>▶</span>
+                    <span className="nav-arrow" style={{ transform: expanded ? 'rotate(90deg)' : 'none' }}>▶</span>
                   </button>
-                  {isExpanded && (
+                  {expanded && (
                     <div className="nav-sub-menu">
                       {item.children.map((subItem) => (
                         <NavLink

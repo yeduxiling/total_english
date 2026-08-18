@@ -192,7 +192,7 @@ export default function BookUploadPage() {
             <div className="book-upload-success-actions">
               <button
                 className="btn btn-primary"
-                onClick={() => navigate(`/book/read/${uploadedBook.id}`)}
+                onClick={() => navigate(`/reading/books/read/${uploadedBook.id}`)}
               >
                 Start Reading
               </button>

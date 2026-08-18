@@ -872,9 +872,9 @@ export default function BookReaderPage() {
         </div>
 
         <div className="reader-header-right">
-          <span className="reader-nav-link" onClick={() => navigate('/book')}>Home</span>
+          <span className="reader-nav-link" onClick={() => navigate('/reading/books')}>Home</span>
           <span className="reader-nav-divider">|</span>
-          <span className="reader-nav-link" onClick={() => navigate('/book/shelf')}>My Shelf</span>
+          <span className="reader-nav-link" onClick={() => navigate('/reading/books/shelf')}>My Shelf</span>
         </div>
       </header>
 
@@ -891,7 +891,7 @@ export default function BookReaderPage() {
           <div className="reader-error-cover">
             <span>⚠️</span>
             <p>{error}</p>
-            <button className="btn btn-secondary" onClick={() => navigate('/book/shelf')}>
+            <button className="btn btn-secondary" onClick={() => navigate('/reading/books/shelf')}>
               Back to Shelf
             </button>
           </div>

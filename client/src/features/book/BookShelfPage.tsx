@@ -63,7 +63,7 @@ export default function BookShelfPage() {
             </h1>
             <p className="page-subtitle">{books.length} {books.length === 1 ? 'book' : 'books'} in your library</p>
           </div>
-          <button className="btn btn-primary" onClick={() => navigate('/book/upload')}>
+          <button className="btn btn-primary" onClick={() => navigate('/reading/books/upload')}>
             Upload Book
           </button>
         </div>
@@ -80,7 +80,7 @@ export default function BookShelfPage() {
           <div className="book-shelf-empty-icon">📖</div>
           <p className="book-shelf-empty-text">Your shelf is empty</p>
           <p className="book-shelf-empty-hint">Upload an EPUB book to get started</p>
-          <button className="btn btn-primary" onClick={() => navigate('/book/upload')}>
+          <button className="btn btn-primary" onClick={() => navigate('/reading/books/upload')}>
             Upload Your First Book
           </button>
         </div>
@@ -90,7 +90,7 @@ export default function BookShelfPage() {
             <div
               key={book.id}
               className="shelf-book-card card"
-              onClick={() => navigate(`/book/read/${book.id}`)}
+              onClick={() => navigate(`/reading/books/read/${book.id}`)}
             >
               <div className="shelf-book-cover">
                 {book.cover_path ? (
