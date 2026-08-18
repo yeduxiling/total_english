@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 make g++
 
 # 先复制 package 文件安装依赖（利用 Docker 缓存层）
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm config set registry https://registry.npmmirror.com && npm install
 
 # 复制源码
 COPY . .
