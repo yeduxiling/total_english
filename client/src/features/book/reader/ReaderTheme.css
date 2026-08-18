@@ -1,0 +1,35 @@
+/* ===== Reader Dark Theme System ===== */
+:root {
+  --reader-bg: #13141f;
+  --reader-surface: #1c1d2d;
+  --reader-surface-hover: #25273c;
+  --reader-surface-border: rgba(255, 255, 255, 0.08);
+  --reader-text: #e2e8f0;
+  --reader-text-secondary: #94a3b8;
+  --reader-text-muted: #64748b;
+  --reader-accent: #6366f1;
+  --reader-accent-light: #818cf8;
+
+  /* 4 色高亮标注色彩 */
+  --hl-yellow: #eab308;
+  --hl-yellow-bg: rgba(234, 179, 8, 0.35);
+  --hl-green: #22c55e;
+  --hl-green-bg: rgba(34, 197, 94, 0.35);
+  --hl-blue: #3b82f6;
+  --hl-blue-bg: rgba(59, 130, 246, 0.35);
+  --hl-pink: #ec4899;
+  --hl-pink-bg: rgba(236, 72, 153, 0.35);
+}
+
+.book-reader-dark {
+  background-color: var(--reader-bg);
+  color: var(--reader-text);
+  min-height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  user-select: text;
+}

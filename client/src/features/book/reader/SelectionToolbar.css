@@ -1,0 +1,160 @@
+.selection-toolbar-overlay {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: toolbarFadeIn 0.15s ease forwards;
+  pointer-events: auto;
+  user-select: none;
+}
+
+@keyframes toolbarFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 默认 / 正上方显示：向上位移 100% 自身高度 + 10px 间距，绝对不压在文字上 */
+.selection-toolbar-overlay.placement-top {
+  transform: translate(-50%, -100%) !important;
+  margin-top: -10px !important;
+}
+
+/* 页面最上方内容翻转至正下方显示：向下位移 + 10px 间距 */
+.selection-toolbar-overlay.placement-bottom {
+  transform: translate(-50%, 0) !important;
+  margin-top: 10px !important;
+}
+
+.selection-toolbar {
+  display: flex;
+  align-items: center;
+  background: #232638;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  padding: 4px 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
+  gap: 4px;
+  backdrop-filter: blur(14px);
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.toolbar-btn.btn-danger-hover:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+
+.toolbar-btn.active {
+  background: var(--reader-accent);
+  color: #ffffff;
+}
+
+.toolbar-icon {
+  font-size: 14px;
+}
+
+/* 颜色选择器二级菜单 */
+.color-picker-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #232638;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  padding: 6px 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  animation: toolbarFadeIn 0.15s ease forwards;
+}
+
+.color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-dot:hover {
+  transform: scale(1.2);
+  border-color: #ffffff;
+}
+
+.color-yellow { background-color: #facc15; }
+.color-green { background-color: #4ade80; }
+.color-blue { background-color: #60a5fa; }
+.color-pink { background-color: #f472b6; }
+
+/* 查询二级菜单 */
+.lookup-submenu {
+  display: flex;
+  flex-direction: column;
+  background: #232638;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65);
+  min-width: 230px;
+  animation: toolbarFadeIn 0.15s ease forwards;
+  gap: 4px;
+}
+
+.lookup-submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lookup-submenu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.submenu-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.submenu-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.submenu-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.submenu-desc {
+  font-size: 11px;
+  color: #94a3b8;
+}

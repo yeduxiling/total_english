@@ -1,0 +1,91 @@
+.note-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.15s ease forwards;
+}
+
+.note-modal {
+  width: 100%;
+  max-width: 480px;
+  background: #1e2130;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  color: #f1f5f9;
+}
+
+.note-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.note-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.note-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+.note-modal-close:hover {
+  color: #ffffff;
+}
+
+.note-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note-modal-quote {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid var(--reader-accent);
+  padding: 10px 12px;
+  border-radius: 0 6px 6px 0;
+}
+
+.note-modal-quote-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  font-style: italic;
+  margin: 0;
+}
+
+.note-modal-textarea {
+  background: #151722;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.note-modal-textarea:focus {
+  background: #191c2b;
+  border-color: var(--reader-accent);
+}
+
+.note-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}

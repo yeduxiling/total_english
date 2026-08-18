@@ -29,6 +29,7 @@ const navItems: NavItem[] = [
   { path: '/review', icon: '🧠', label: 'Review' },
   { path: '/phonetic', icon: '🗣️', label: 'Phonetic' },
   { path: '/express', icon: '✍️', label: 'Express' },
+  { path: '/book', icon: '📚', label: 'Book' },
   { path: '/settings', icon: '⚙️', label: 'Settings' },
 ];
 

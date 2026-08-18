@@ -1,0 +1,190 @@
+/* Upload zone wrapper */
+.book-upload-zone-wrapper {
+  margin-top: var(--space-6);
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dropzone */
+.book-upload-dropzone {
+  width: 100%;
+  padding: var(--space-12) var(--space-8);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.book-upload-dropzone:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.book-upload-dropzone.drag-over {
+  border-color: var(--color-accent);
+  background: var(--color-accent-glow);
+  border-style: solid;
+}
+
+.book-upload-dropzone-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.book-upload-dropzone-text {
+  font-size: var(--text-lg);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.book-upload-dropzone-hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* Upload progress */
+.book-upload-progress {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.book-upload-progress-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-4);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.book-upload-progress-filename {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-upload-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+
+.book-upload-progress-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+  transition: width 200ms ease;
+}
+
+.book-upload-progress-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-medium);
+}
+
+/* Upload success */
+.book-upload-success {
+  width: 100%;
+  padding: var(--space-6);
+}
+
+.book-upload-success-preview {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+  margin-bottom: var(--space-6);
+}
+
+.book-upload-success-cover {
+  width: 120px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+}
+
+.book-upload-success-cover-placeholder {
+  width: 120px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.book-upload-success-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.book-upload-success-badge {
+  font-size: var(--text-sm);
+  color: var(--color-success);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-3);
+}
+
+.book-upload-success-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.book-upload-success-author {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.book-upload-success-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Upload error */
+.book-upload-error {
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.book-upload-error-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-4);
+}
+
+.book-upload-error-text {
+  font-size: var(--text-base);
+  color: var(--color-error);
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .book-upload-success-preview {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .book-upload-success-actions {
+    justify-content: center;
+  }
+}

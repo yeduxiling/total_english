@@ -272,12 +272,14 @@ export default function SentenceCollectionPage() {
         </div>
       ) : (
         <div className="sentence-list">
-          {sentences.map((item) => (
+          {sentences.map((item) => {
+            const isAIAnalysis = item.source === 'analysis' || Boolean(item.analysis_result);
+            return (
             <div key={item.id} className={`sentence-card ${editingId === item.id ? 'editing' : ''}`}>
               <div className="card-top-row">
                 <div className="source-badges">
-                  <span className={`source-badge ${item.source}`}>
-                    {item.source === 'analysis' ? '⚡ AI Analysis' : '✍️ Manual'}
+                  <span className={`source-badge ${isAIAnalysis ? 'analysis' : 'manual'}`}>
+                    {isAIAnalysis ? '⚡ AI Analysis' : '✍️ Manual'}
                   </span>
                 </div>
                 <div className="card-actions">
@@ -358,7 +360,7 @@ export default function SentenceCollectionPage() {
               </div>
 
               {/* 可折叠的分析详情 */}
-              {item.analysis_result && item.source === 'analysis' && editingId !== item.id && (
+              {item.analysis_result && editingId !== item.id && (
                 <div className="analysis-collapse-section">
                   <button
                     className={`analysis-toggle-btn ${expandedIds.has(item.id) ? 'expanded' : ''}`}
@@ -421,7 +423,8 @@ export default function SentenceCollectionPage() {
               )}
 
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

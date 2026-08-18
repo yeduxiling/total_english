@@ -1,0 +1,155 @@
+.book-shelf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.book-shelf-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: center;
+  padding: var(--space-12);
+  color: var(--color-text-secondary);
+}
+
+/* Empty state */
+.book-shelf-empty {
+  text-align: center;
+  padding: var(--space-12) var(--space-8);
+}
+
+.book-shelf-empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.book-shelf-empty-text {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.book-shelf-empty-hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-6);
+}
+
+/* Shelf grid */
+.book-shelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .book-shelf-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .book-shelf-header {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}
+
+/* Shelf book card */
+.shelf-book-card {
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  overflow: hidden;
+  padding: 0;
+}
+
+.shelf-book-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.shelf-book-cover {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--color-bg-tertiary);
+  overflow: hidden;
+}
+
+.shelf-book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shelf-book-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: var(--color-text-tertiary);
+  background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-bg-input));
+}
+
+.shelf-book-info {
+  padding: var(--space-3) var(--space-3) var(--space-3);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.shelf-book-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
+}
+
+.shelf-book-author {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: var(--space-2);
+  width: 100%;
+  text-align: center;
+}
+
+.shelf-book-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.shelf-book-size {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.shelf-book-delete {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  padding: 0 var(--space-1);
+  line-height: 1;
+  transition: color var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.shelf-book-delete:hover {
+  color: var(--color-error);
+  background: rgba(239, 68, 68, 0.08);
+}

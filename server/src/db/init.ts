@@ -138,6 +138,64 @@ export function initDatabase(): void {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_sentences_text ON sentences(sentence);
+
+    -- 书籍主表
+    CREATE TABLE IF NOT EXISTS books (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      author TEXT,
+      cover_path TEXT,
+      file_path TEXT NOT NULL,
+      file_size INTEGER,
+      total_locations INTEGER,
+      last_location TEXT,
+      last_read_at TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 书签表
+    CREATE TABLE IF NOT EXISTS book_bookmarks (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      cfi TEXT NOT NULL,
+      label TEXT,
+      percentage REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_book_bookmarks_book ON book_bookmarks(book_id);
+
+    -- 划线高亮表
+    CREATE TABLE IF NOT EXISTS book_highlights (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      cfi_range TEXT NOT NULL,
+      text TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT 'yellow',
+      chapter TEXT,
+      percentage REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_book_highlights_book ON book_highlights(book_id);
+
+    -- 笔记/想法表
+    CREATE TABLE IF NOT EXISTS book_notes (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      highlight_id TEXT,
+      cfi TEXT NOT NULL,
+      referenced_text TEXT NOT NULL,
+      content TEXT NOT NULL,
+      chapter TEXT,
+      percentage REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+      FOREIGN KEY (highlight_id) REFERENCES book_highlights(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_book_notes_book ON book_notes(book_id);
   `);
 
   // 动态升级 sentences 表，添加 source_tag 字段

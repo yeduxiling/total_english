@@ -11,6 +11,8 @@ import ttsRouter from './routes/tts.js';
 import sentenceRouter from './routes/sentence.js';
 import expressRouter from './routes/express.js';
 import tagsRouter from './routes/tags.js';
+import booksRouter from './routes/books.js';
+import bookAnnotationsRouter from './routes/bookAnnotations.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,6 +35,8 @@ app.use('/api/tts', ttsRouter);
 app.use('/api/sentences', sentenceRouter);
 app.use('/api/express', expressRouter);
 app.use('/api/tags', tagsRouter);
+app.use('/api/books', booksRouter);
+app.use('/api/books', bookAnnotationsRouter);
 
 // 健康检查
 app.get('/api/health', (_req, res) => {
