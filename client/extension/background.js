@@ -1,5 +1,5 @@
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id) return;
+  if (!tab || !tab.id) return;
 
   try {
     // 注入提取脚本到当前页面的所有 frame（包括跨域 iframe）
@@ -11,67 +11,70 @@ chrome.action.onClicked.addListener(async (tab) => {
           const clickables = document.querySelectorAll(
             '[aria-expanded="false"], [data-state="closed"], .accordion-header, .accordion-button, .accordion-toggle, .accordion__trigger, .accordion-title, summary, [role="button"][aria-expanded="false"], .collapsible-header, .panel-heading'
           );
-          clickables.forEach(el => {
+          clickables.forEach(function (el) {
             try {
-              (el as HTMLElement).click();
-            } catch {}
+              if (typeof el.click === 'function') el.click();
+            } catch (err) {}
           });
 
           // 针对通过 class 或下箭头图标组织的手风琴进行深度触发
-          document.querySelectorAll('.accordion, .collapsible, [data-accordion]').forEach(acc => {
+          document.querySelectorAll('.accordion, .collapsible, [data-accordion]').forEach(function (acc) {
             const header = acc.querySelector('button, header, h2, h3, h4, .title, [class*="header"], [class*="title"], [class*="toggle"]');
-            if (header) {
-              try { (header as HTMLElement).click(); } catch {}
+            if (header && typeof header.click === 'function') {
+              try { header.click(); } catch (err) {}
             }
           });
 
           // 等待 350ms，让 React / Vue / 动画完成 DOM 渲染挂载
-          await new Promise(r => setTimeout(r, 350));
+          await new Promise(function (resolve) { setTimeout(resolve, 350); });
 
           // 2. 第二轮：强制将所有 CSS 隐藏的手风琴面板、details、collapse 全部设为完全可见
           let count = 0;
-          document.querySelectorAll('details').forEach(d => {
+          document.querySelectorAll('details').forEach(function (d) {
             d.setAttribute('open', 'true');
             count++;
           });
 
-          document.querySelectorAll(
+          const hiddenPanels = document.querySelectorAll(
             '[aria-expanded="false"], [data-state="closed"], .collapsed, .collapse:not(.show), [hidden], .accordion-content, .accordion-body, .panel-collapse, [data-accordion-content], [class*="accordion_body"], [class*="accordion__body"], [class*="accordion-body"], [class*="accordion-content"]'
-          ).forEach(el => {
-            const htmlEl = el as HTMLElement;
-            htmlEl.removeAttribute('hidden');
-            htmlEl.setAttribute('aria-expanded', 'true');
-            if (htmlEl.hasAttribute('data-state')) htmlEl.setAttribute('data-state', 'open');
-            if (htmlEl.classList.contains('collapsed')) htmlEl.classList.remove('collapsed');
-            if (htmlEl.classList.contains('collapse') && !htmlEl.classList.contains('show')) htmlEl.classList.add('show');
-            htmlEl.style.display = 'block';
-            htmlEl.style.height = 'auto';
-            htmlEl.style.maxHeight = 'none';
-            htmlEl.style.opacity = '1';
-            htmlEl.style.visibility = 'visible';
-            count++;
+          );
+          hiddenPanels.forEach(function (el) {
+            try {
+              el.removeAttribute('hidden');
+              el.setAttribute('aria-expanded', 'true');
+              if (el.hasAttribute('data-state')) el.setAttribute('data-state', 'open');
+              if (el.classList.contains('collapsed')) el.classList.remove('collapsed');
+              if (el.classList.contains('collapse') && !el.classList.contains('show')) el.classList.add('show');
+              el.style.display = 'block';
+              el.style.height = 'auto';
+              el.style.maxHeight = 'none';
+              el.style.opacity = '1';
+              el.style.visibility = 'visible';
+              count++;
+            } catch (err) {}
           });
 
           // 3. 查找最丰富正文区域
           let contentEl = document.querySelector('main, article, [role="main"], #content, .course-content, .lesson-content, .content, .page-content, body');
           if (!contentEl) contentEl = document.body;
 
-          const clone = contentEl.cloneNode(true) as HTMLElement;
+          const clone = contentEl.cloneNode(true);
 
           // 移除脚本、样式、无用导航
-          clone.querySelectorAll('script, style, noscript, nav, header, footer, .sidebar, #sidebar, .header-nav').forEach(el => el.remove());
+          clone.querySelectorAll('script, style, noscript, nav, header, footer, .sidebar, #sidebar, .header-nav').forEach(function (el) {
+            el.remove();
+          });
 
           // 补全所有图片为绝对路径
-          clone.querySelectorAll('img').forEach(img => {
+          clone.querySelectorAll('img').forEach(function (img) {
             const src = img.getAttribute('src');
             if (src && !src.startsWith('data:')) {
               try {
                 img.src = new URL(src, window.location.href).href;
-              } catch {}
+              } catch (err) {}
             }
           });
 
-          // 确保所有列表 ul, ol, li 结构完好
           const textLen = (clone.textContent || '').trim().length;
 
           return {
@@ -80,29 +83,29 @@ chrome.action.onClicked.addListener(async (tab) => {
             contentHtml: clone.innerHTML,
             textLen: textLen,
             siteName: window.location.hostname.replace(/^www\./, ''),
-            count,
+            count: count,
           };
-        } catch (e: any) {
+        } catch (e) {
           return { error: e.message };
         }
       },
     });
 
     if (!results || results.length === 0) {
-      alert('Failed to read page content.');
+      console.warn('Total English Clipper: No frames found.');
       return;
     }
 
     // 在所有 frame 中找出正文字数最丰富的 frame（解决课件嵌入在 iframe 内部的问题）
-    let bestResult: any = null;
+    let bestResult = null;
     for (const r of results) {
-      if (r?.result && !r.result.error && (r.result.textLen || 0) > (bestResult?.textLen || 0)) {
+      if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) {
         bestResult = r.result;
       }
     }
 
     if (!bestResult || !bestResult.contentHtml || bestResult.textLen < 20) {
-      alert('Unable to extract readable content from this page.');
+      console.warn('Total English Clipper: Content too short or empty.');
       return;
     }
 
@@ -119,17 +122,17 @@ chrome.action.onClicked.addListener(async (tab) => {
     });
 
     if (!response.ok) {
-      throw new Error(`Server returned status ${response.status}`);
+      throw new Error('Server returned status ' + response.status);
     }
 
     const created = await response.json();
     if (created && created.id) {
       // 自动在浏览器中打开沉浸式阅读器
       chrome.tabs.create({
-        url: `http://localhost:5173/reading/web/read/${created.id}`,
+        url: 'http://localhost:5173/reading/web/read/' + created.id,
       });
     }
-  } catch (err: any) {
-    alert('Total English Clipper Error: ' + err.message);
+  } catch (err) {
+    console.error('Total English Clipper Error:', err);
   }
 });
