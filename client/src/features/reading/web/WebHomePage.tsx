@@ -66,7 +66,7 @@ export default function WebHomePage() {
       setUrlInput('');
       navigate(`/reading/web/read/${created.id}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch webpage. For complex LMS or login-required pages, try "1-Click Clipper" or "Paste Content"!');
+      setError(err.message || 'Failed to fetch webpage. For complex LMS or login-required pages, try "1-Click Expand & Copy"!');
     } finally {
       setLoading(false);
     }
@@ -102,17 +102,27 @@ export default function WebHomePage() {
     }
   };
 
-  // 监听富文本粘贴事件（保留复制的图片和 HTML 标签）
+  // 监听富文本粘贴事件（自动保留复制的 HTML、图片以及自动提取标题）
   const handlePasteEvent = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const html = e.clipboardData.getData('text/html');
+    const plainText = e.clipboardData.getData('text/plain');
+
     if (html && html.trim()) {
       e.preventDefault();
       setPasteContent(html);
     }
+
+    // 智能提取第一行或 h1 作为标题
+    if (!pasteTitle.trim()) {
+      const firstLine = (plainText || '').trim().split('\n')[0];
+      if (firstLine && firstLine.length < 100) {
+        setPasteTitle(firstLine.replace(/^[#\s]+/, ''));
+      }
+    }
   };
 
-  // 生成基于 Form 提交的 Bookmarklet 脚本代码 (彻底避开 HTTPS Mixed Content 限制，支持 iframe 与手风琴全展开)
-  const bookmarkletCode = `javascript:(function(){try{function expandDoc(d){d.querySelectorAll('details').forEach(el=>el.setAttribute('open','true'));d.querySelectorAll('[aria-expanded=\"false\"]').forEach(el=>{el.setAttribute('aria-expanded','true');el.removeAttribute('hidden');if(el.classList.contains('collapsed'))el.classList.remove('collapsed');if(el.classList.contains('collapse')&&!el.classList.contains('show'))el.classList.add('show');});d.querySelectorAll('.accordion-body,.panel-collapse,.collapse,[data-accordion-content]').forEach(el=>{el.style.display='block';el.style.height='auto';});}expandDoc(document);document.querySelectorAll('iframe').forEach(ifr=>{try{if(ifr.contentDocument)expandDoc(ifr.contentDocument);}catch(e){}});let contentEl=document.querySelector('main,article,[role=\"main\"],#content,.course-content,.lesson-content,.content');if(!contentEl){const ifr=document.querySelector('#scorm_content_frame,#scorm-content-frame,iframe');try{if(ifr&&ifr.contentDocument){contentEl=ifr.contentDocument.querySelector('main,article,body')||ifr.contentDocument.body;}}catch(e){}}if(!contentEl)contentEl=document.body;const clone=contentEl.cloneNode(true);clone.querySelectorAll('script,style,noscript,nav,header,footer,.sidebar,#sidebar').forEach(el=>el.remove());clone.querySelectorAll('img').forEach(img=>{if(img.src)img.src=img.src;});const form=document.createElement('form');form.method='POST';form.action='http://localhost:3001/api/webpages/clip';form.target='_blank';form.style.display='none';function addField(name,val){const input=document.createElement('textarea');input.name=name;input.value=val||'';form.appendChild(input);}addField('title',document.title||'Clipped Article');addField('url',window.location.href);addField('contentHtml',clone.innerHTML);addField('siteName',window.location.hostname.replace(/^www\\./,''));document.body.appendChild(form);form.submit();setTimeout(()=>form.remove(),1000);}catch(e){alert('Clipper error: '+e.message);}})();`;
+  // 100% 绝对生效的“一键展开所有折叠手风琴并全自动复制”小工具脚本
+  const expandAndCopyBookmarkletCode = `javascript:(function(){try{var count=0;document.querySelectorAll('details').forEach(function(d){d.setAttribute('open','true');count++;});document.querySelectorAll('[aria-expanded=\"false\"]').forEach(function(el){el.setAttribute('aria-expanded','true');el.removeAttribute('hidden');if(el.classList.contains('collapsed'))el.classList.remove('collapsed');if(el.classList.contains('collapse')&&!el.classList.contains('show'))el.classList.add('show');count++;});document.querySelectorAll('.accordion-body,.panel-collapse,.collapse,[data-accordion-content]').forEach(function(el){el.style.display='block';el.style.height='auto';count++;});var iframes=document.querySelectorAll('iframe');for(var i=0;i<iframes.length;i++){try{var doc=iframes[i].contentDocument||iframes[i].contentWindow.document;if(doc){doc.querySelectorAll('details').forEach(function(d){d.setAttribute('open','true');count++;});doc.querySelectorAll('[aria-expanded=\"false\"]').forEach(function(el){el.setAttribute('aria-expanded','true');count++;});doc.querySelectorAll('.accordion-body,.collapse').forEach(function(el){el.style.display='block';count++;});}}catch(e){}}var contentEl=document.querySelector('main,article,[role=\"main\"],#content,.course-content,.lesson-content,.content');if(!contentEl){for(var j=0;j<iframes.length;j++){try{var idoc=iframes[j].contentDocument||iframes[j].contentWindow.document;if(idoc){contentEl=idoc.querySelector('main,article,body')||idoc.body;break;}}catch(e){}}}if(!contentEl)contentEl=document.body;var sel=window.getSelection();var range=document.createRange();range.selectNodeContents(contentEl);sel.removeAllRanges();sel.addRange(range);var success=false;try{success=document.execCommand('copy');}catch(e){}sel.removeAllRanges();if(success){alert('🎉 成功！\\n已自动展开 '+count+' 处折叠手风琴，并完整复制了所有正文与图文内容！\\n\\n👉 现在请返回 Total English，在 \"Paste Content\" 框中按 Cmd+V (或 Ctrl+V) 粘贴即可！');}else{alert('✅ 页面已自动展开所有折叠手风琴！\\n请在网页上按 Cmd+A 全选并按 Cmd+C 复制，然后返回 Total English 粘贴！');}}catch(err){alert('❌ 操作异常: '+err.message);}})();`;
 
   return (
     <div className="web-home-page animate-in">
@@ -135,7 +145,7 @@ export default function WebHomePage() {
       {/* 二级页签 */}
       <ReadingNavTabs />
 
-      {/* 导入卡片 (支持 URL / 1-Click Clipper / 粘贴内容 3 种模式) */}
+      {/* 导入卡片 (支持 URL / 展开复制工具 / 粘贴内容 3 种模式) */}
       <div className="web-import-card card">
         <div className="web-import-header-row">
           <div className="web-import-header-left">
@@ -160,7 +170,7 @@ export default function WebHomePage() {
               className={`mode-switch-btn ${importMode === 'clipper' ? 'active' : ''}`}
               onClick={() => { setImportMode('clipper'); setError(''); }}
             >
-              🚀 1-Click Clipper (LMS & 折叠)
+              ⚡ 1-Click Expand All (Shopify 课件助手)
             </button>
             <button
               type="button"
@@ -208,23 +218,23 @@ export default function WebHomePage() {
         {importMode === 'clipper' && (
           <div className="clipper-guide-panel">
             <div className="clipper-badge-box">
-              <span className="clipper-step-number">Step 1</span>
+              <span className="clipper-step-number">Step 1 (只需拖动一次)</span>
               <p className="clipper-step-desc">
-                Drag this bookmark button to your browser's <strong>Bookmark Bar (书签栏)</strong> (just once):
+                将下方按钮拖拽至浏览器<strong>书签栏（Bookmarks Bar）</strong>：
               </p>
               <div className="clipper-draggable-wrap">
                 <a
-                  href={bookmarkletCode}
+                  href={expandAndCopyBookmarkletCode}
                   className="clipper-bookmark-btn"
                   onClick={(e) => {
                     e.preventDefault();
-                    alert('Please drag and drop this button to your browser bookmark bar (书签栏) to use it on any webpage!');
+                    alert('请直接按住并拖动这个按钮到浏览器的书签栏 (Bookmarks Bar)！');
                   }}
                   title="Drag this button to your bookmark bar"
                 >
-                  🔖 Save to Total English
+                  ⚡ 展开全部手风琴并复制
                 </a>
-                <span className="clipper-drag-hint">← Drag this to bookmarks bar</span>
+                <span className="clipper-drag-hint">← 按住鼠标左键拖到书签栏</span>
               </div>
             </div>
 
@@ -232,13 +242,17 @@ export default function WebHomePage() {
               <div className="clipper-step-item">
                 <span className="clipper-step-number">Step 2</span>
                 <p className="clipper-step-desc">
-                  Open any complex page (like <strong>Shopify Academy, Coursera, or login-required course</strong>).
+                  打开 <strong>Shopify Academy 课程页面</strong>，点击书签栏上的 <strong>「⚡ 展开全部手风琴并复制」</strong>。
+                  <br />
+                  <span style={{ color: '#a5b4fc', fontSize: '12px' }}>
+                    （它会弹出提示弹窗，并自动将所有折叠的手风琴<strong>全部强制展开</strong>并复制图文）
+                  </span>
                 </p>
               </div>
               <div className="clipper-step-item">
                 <span className="clipper-step-number">Step 3</span>
                 <p className="clipper-step-desc">
-                  Click the <strong>"Save to Total English"</strong> bookmark! It will <strong>automatically expand all folded accordions, grab all images, and launch the reader instantly!</strong>
+                  返回本页面，切换至右侧 <strong>「📋 Paste Content」</strong> 框中按 <strong>Cmd + V</strong> 粘贴，点击保存即可瞬间开始阅读！
                 </p>
               </div>
             </div>
@@ -262,7 +276,7 @@ export default function WebHomePage() {
                 value={pasteContent}
                 onChange={(e) => setPasteContent(e.target.value)}
                 onPaste={handlePasteEvent}
-                rows={6}
+                rows={7}
                 disabled={loading}
                 required
               />
@@ -303,7 +317,7 @@ export default function WebHomePage() {
           <div className="web-home-empty card">
             <div className="web-home-empty-icon">📰</div>
             <p className="web-home-empty-text">No web articles yet</p>
-            <p className="web-home-empty-hint">Use URL import, 1-Click Clipper, or paste content above to start reading</p>
+            <p className="web-home-empty-hint">Use URL import, Expand Tool, or paste content above to start reading</p>
           </div>
         ) : (
           <div className="web-home-recent-grid">
