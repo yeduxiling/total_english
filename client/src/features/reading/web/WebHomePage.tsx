@@ -121,9 +121,6 @@ export default function WebHomePage() {
     }
   };
 
-  // 100% 绝对生效的“一键展开所有折叠手风琴并全自动复制”小工具脚本
-  const expandAndCopyBookmarkletCode = `javascript:(function(){try{var count=0;document.querySelectorAll('details').forEach(function(d){d.setAttribute('open','true');count++;});document.querySelectorAll('[aria-expanded=\"false\"]').forEach(function(el){el.setAttribute('aria-expanded','true');el.removeAttribute('hidden');if(el.classList.contains('collapsed'))el.classList.remove('collapsed');if(el.classList.contains('collapse')&&!el.classList.contains('show'))el.classList.add('show');count++;});document.querySelectorAll('.accordion-body,.panel-collapse,.collapse,[data-accordion-content]').forEach(function(el){el.style.display='block';el.style.height='auto';count++;});var iframes=document.querySelectorAll('iframe');for(var i=0;i<iframes.length;i++){try{var doc=iframes[i].contentDocument||iframes[i].contentWindow.document;if(doc){doc.querySelectorAll('details').forEach(function(d){d.setAttribute('open','true');count++;});doc.querySelectorAll('[aria-expanded=\"false\"]').forEach(function(el){el.setAttribute('aria-expanded','true');count++;});doc.querySelectorAll('.accordion-body,.collapse').forEach(function(el){el.style.display='block';count++;});}}catch(e){}}var contentEl=document.querySelector('main,article,[role=\"main\"],#content,.course-content,.lesson-content,.content');if(!contentEl){for(var j=0;j<iframes.length;j++){try{var idoc=iframes[j].contentDocument||iframes[j].contentWindow.document;if(idoc){contentEl=idoc.querySelector('main,article,body')||idoc.body;break;}}catch(e){}}}if(!contentEl)contentEl=document.body;var sel=window.getSelection();var range=document.createRange();range.selectNodeContents(contentEl);sel.removeAllRanges();sel.addRange(range);var success=false;try{success=document.execCommand('copy');}catch(e){}sel.removeAllRanges();if(success){alert('🎉 成功！\\n已自动展开 '+count+' 处折叠手风琴，并完整复制了所有正文与图文内容！\\n\\n👉 现在请返回 Total English，在 \"Paste Content\" 框中按 Cmd+V (或 Ctrl+V) 粘贴即可！');}else{alert('✅ 页面已自动展开所有折叠手风琴！\\n请在网页上按 Cmd+A 全选并按 Cmd+C 复制，然后返回 Total English 粘贴！');}}catch(err){alert('❌ 操作异常: '+err.message);}})();`;
-
   return (
     <div className="web-home-page animate-in">
       {/* Header */}
@@ -218,41 +215,33 @@ export default function WebHomePage() {
         {importMode === 'clipper' && (
           <div className="clipper-guide-panel">
             <div className="clipper-badge-box">
-              <span className="clipper-step-number">Step 1 (只需拖动一次)</span>
+              <span className="clipper-step-number">🌟 终极方案：Total English 浏览器扩展插件（全自动穿透 iframe & 展开所有手风琴）</span>
               <p className="clipper-step-desc">
-                将下方按钮拖拽至浏览器<strong>书签栏（Bookmarks Bar）</strong>：
+                Shopify Academy 的课件嵌套在<strong>跨域 iframe</strong> 中，浏览器书签因同源策略无法直接穿透。安装轻量扩展后，<strong>只需点一下浏览器右上角图标，即可 1 秒全自动展开并抓取！</strong>
               </p>
-              <div className="clipper-draggable-wrap">
-                <a
-                  href={expandAndCopyBookmarkletCode}
-                  className="clipper-bookmark-btn"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert('请直接按住并拖动这个按钮到浏览器的书签栏 (Bookmarks Bar)！');
-                  }}
-                  title="Drag this button to your bookmark bar"
-                >
-                  ⚡ 展开全部手风琴并复制
-                </a>
-                <span className="clipper-drag-hint">← 按住鼠标左键拖到书签栏</span>
-              </div>
             </div>
 
             <div className="clipper-steps-list">
               <div className="clipper-step-item">
+                <span className="clipper-step-number">Step 1</span>
+                <p className="clipper-step-desc">
+                  打开 Chrome / Edge 浏览器，地址栏输入 <code>chrome://extensions</code> 并回车，右上角打开 <strong>「开发者模式 (Developer mode)」</strong>。
+                </p>
+              </div>
+              <div className="clipper-step-item">
                 <span className="clipper-step-number">Step 2</span>
                 <p className="clipper-step-desc">
-                  打开 <strong>Shopify Academy 课程页面</strong>，点击书签栏上的 <strong>「⚡ 展开全部手风琴并复制」</strong>。
+                  点击左上角 <strong>「加载已解压的扩展程序 (Load unpacked)」</strong>，选择本项目中的文件夹：
                   <br />
-                  <span style={{ color: '#a5b4fc', fontSize: '12px' }}>
-                    （它会弹出提示弹窗，并自动将所有折叠的手风琴<strong>全部强制展开</strong>并复制图文）
-                  </span>
+                  <code style={{ color: '#818cf8', userSelect: 'all', fontSize: '13px', padding: '4px 8px', background: '#1e1b4b', borderRadius: '4px', display: 'inline-block', marginTop: '6px' }}>
+                    /Users/inno/AI coding project/total english/client/extension
+                  </code>
                 </p>
               </div>
               <div className="clipper-step-item">
                 <span className="clipper-step-number">Step 3</span>
                 <p className="clipper-step-desc">
-                  返回本页面，切换至右侧 <strong>「📋 Paste Content」</strong> 框中按 <strong>Cmd + V</strong> 粘贴，点击保存即可瞬间开始阅读！
+                  打开任何 <strong>Shopify Academy / 复杂课件页面</strong>，点击浏览器右上角拼图图标里的 <strong>「Total English Web Clipper」</strong>，系统会自动穿透 iframe、展开所有手风琴并直接弹出沉浸式阅读器！
                 </p>
               </div>
             </div>
