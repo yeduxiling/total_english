@@ -44,6 +44,15 @@ webpagesRouter.post('/clip', async (req: Request, res: Response): Promise<void> 
     );
 
     const created = db.prepare('SELECT * FROM web_pages WHERE id = ?').get(pageId);
+    
+    // 如果是浏览器 Form 提交（用于绕过 HTTPS 混合内容限制），直接重定向至阅读器页面打开！
+    const isFormSubmit = req.headers['content-type']?.includes('application/x-www-form-urlencoded') ||
+                         req.headers['sec-fetch-mode'] === 'navigate';
+    if (isFormSubmit) {
+      res.redirect(`http://localhost:5173/reading/web/read/${pageId}`);
+      return;
+    }
+
     res.status(201).json(created);
   } catch (err: any) {
     console.error('Failed to clip webpage:', err);
