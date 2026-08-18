@@ -59,17 +59,28 @@ export default function BookUploadPage() {
 
     xhr.addEventListener('load', () => {
       try {
-        const response = JSON.parse(xhr.responseText);
         if (xhr.status >= 200 && xhr.status < 300) {
+          const response = JSON.parse(xhr.responseText);
           setStatus('success');
           setUploadedBook(response.book);
-        } else {
+        } else if (xhr.status === 413) {
           setStatus('error');
-          setError(response.error || `Upload failed (HTTP ${xhr.status})`);
+          setError('File size too large for the server upload limit (HTTP 413).');
+        } else if (xhr.status === 502 || xhr.status === 504) {
+          setStatus('error');
+          setError(`Server gateway error (HTTP ${xhr.status}). Please check if backend is running.`);
+        } else {
+          let errorMsg = `Upload failed (HTTP ${xhr.status})`;
+          try {
+            const parsed = JSON.parse(xhr.responseText);
+            if (parsed.error) errorMsg = parsed.error;
+          } catch {}
+          setStatus('error');
+          setError(errorMsg);
         }
       } catch {
         setStatus('error');
-        setError('Failed to parse server response');
+        setError(`Upload failed with status HTTP ${xhr.status}.`);
       }
     });
 
