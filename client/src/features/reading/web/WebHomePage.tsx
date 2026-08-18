@@ -20,7 +20,7 @@ interface WebPageItem {
 
 export default function WebHomePage() {
   const navigate = useNavigate();
-  const [importMode, setImportMode] = useState<'url' | 'paste' | 'clipper'>('url');
+  const [importMode, setImportMode] = useState<'url' | 'extension' | 'paste'>('url');
   
   // URL 模式状态
   const [urlInput, setUrlInput] = useState('');
@@ -66,7 +66,7 @@ export default function WebHomePage() {
       setUrlInput('');
       navigate(`/reading/web/read/${created.id}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch webpage. For complex LMS or login-required pages, try "1-Click Expand & Copy"!');
+      setError(err.message || 'Failed to fetch webpage. For protected LMS or login-required pages, use the Browser Extension or Paste Content!');
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ export default function WebHomePage() {
       setPasteContent(html);
     }
 
-    // 智能提取第一行或 h1 作为标题
+    // 智能提取第一行作为标题
     if (!pasteTitle.trim()) {
       const firstLine = (plainText || '').trim().split('\n')[0];
       if (firstLine && firstLine.length < 100) {
@@ -142,7 +142,7 @@ export default function WebHomePage() {
       {/* 二级页签 */}
       <ReadingNavTabs />
 
-      {/* 导入卡片 (支持 URL / 展开复制工具 / 粘贴内容 3 种模式) */}
+      {/* 导入卡片 (支持 By URL / Browser Extension / Paste Content 3 种模式) */}
       <div className="web-import-card card">
         <div className="web-import-header-row">
           <div className="web-import-header-left">
@@ -164,10 +164,10 @@ export default function WebHomePage() {
             </button>
             <button
               type="button"
-              className={`mode-switch-btn ${importMode === 'clipper' ? 'active' : ''}`}
-              onClick={() => { setImportMode('clipper'); setError(''); }}
+              className={`mode-switch-btn ${importMode === 'extension' ? 'active' : ''}`}
+              onClick={() => { setImportMode('extension'); setError(''); }}
             >
-              ⚡ 1-Click Expand All (Shopify 课件助手)
+              ⚡ Browser Extension
             </button>
             <button
               type="button"
@@ -207,17 +207,26 @@ export default function WebHomePage() {
               </button>
             </div>
             <p className="import-hint-text">
-              💡 Best for publicly available blogs, Medium, Substack, News, Wikipedia, Tech docs, etc.
+              💡 Works great for public blogs, Medium, Substack, News, Wikipedia, Tech articles, etc.
             </p>
           </form>
         )}
 
-        {importMode === 'clipper' && (
+        {importMode === 'extension' && (
           <div className="clipper-guide-panel">
             <div className="clipper-badge-box">
-              <span className="clipper-step-number">🌟 终极方案：Total English 浏览器扩展插件（全自动穿透 iframe & 展开所有手风琴）</span>
+              <div className="clipper-badge-top-row">
+                <span className="clipper-step-badge">🚀 1-Click Web Clipper Extension</span>
+                <a
+                  href="/downloads/total-english-clipper.zip"
+                  download="total-english-clipper.zip"
+                  className="clipper-download-btn"
+                >
+                  ⬇️ Download Extension (.zip)
+                </a>
+              </div>
               <p className="clipper-step-desc">
-                Shopify Academy 的课件嵌套在<strong>跨域 iframe</strong> 中，浏览器书签因同源策略无法直接穿透。安装轻量扩展后，<strong>只需点一下浏览器右上角图标，即可 1 秒全自动展开并抓取！</strong>
+                Ideal for interactive course platforms (like <strong>Shopify Academy, Coursera, Skilljar</strong>) and login-required pages. The extension automatically penetrates iframes, expands all folded accordions, and clips full articles with pictures in one click.
               </p>
             </div>
 
@@ -225,23 +234,25 @@ export default function WebHomePage() {
               <div className="clipper-step-item">
                 <span className="clipper-step-number">Step 1</span>
                 <p className="clipper-step-desc">
-                  打开 Chrome / Edge 浏览器，地址栏输入 <code>chrome://extensions</code> 并回车，右上角打开 <strong>「开发者模式 (Developer mode)」</strong>。
+                  Click the button above to <strong>download and unzip</strong> <code>total-english-clipper.zip</code> on your computer.
                 </p>
               </div>
               <div className="clipper-step-item">
                 <span className="clipper-step-number">Step 2</span>
                 <p className="clipper-step-desc">
-                  点击左上角 <strong>「加载已解压的扩展程序 (Load unpacked)」</strong>，选择本项目中的文件夹：
-                  <br />
-                  <code style={{ color: '#818cf8', userSelect: 'all', fontSize: '13px', padding: '4px 8px', background: '#1e1b4b', borderRadius: '4px', display: 'inline-block', marginTop: '6px' }}>
-                    /Users/inno/AI coding project/total english/client/extension
-                  </code>
+                  Open Chrome or Edge, go to <code>chrome://extensions</code>, and turn on <strong>Developer mode</strong> in the top-right corner.
                 </p>
               </div>
               <div className="clipper-step-item">
                 <span className="clipper-step-number">Step 3</span>
                 <p className="clipper-step-desc">
-                  打开任何 <strong>Shopify Academy / 复杂课件页面</strong>，点击浏览器右上角拼图图标里的 <strong>「Total English Web Clipper」</strong>，系统会自动穿透 iframe、展开所有手风琴并直接弹出沉浸式阅读器！
+                  Click <strong>Load unpacked</strong> in the top-left corner, and select the unzipped folder.
+                </p>
+              </div>
+              <div className="clipper-step-item">
+                <span className="clipper-step-number">Step 4</span>
+                <p className="clipper-step-desc">
+                  Open any course or article page, click the <strong>Total English Web Clipper</strong> icon in your browser toolbar, and it will immediately open in the reader!
                 </p>
               </div>
             </div>
@@ -306,7 +317,7 @@ export default function WebHomePage() {
           <div className="web-home-empty card">
             <div className="web-home-empty-icon">📰</div>
             <p className="web-home-empty-text">No web articles yet</p>
-            <p className="web-home-empty-hint">Use URL import, Expand Tool, or paste content above to start reading</p>
+            <p className="web-home-empty-hint">Use URL import, Browser Extension, or paste content above to start reading</p>
           </div>
         ) : (
           <div className="web-home-recent-grid">
