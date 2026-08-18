@@ -107,6 +107,52 @@ webpagesRouter.post('/', async (req: Request, res: Response): Promise<void> => {
 });
 
 /**
+ * 2.1 直接保存用户粘贴的文本/富文本内容
+ * POST /api/webpages/custom { title, content, url?, byline? }
+ */
+webpagesRouter.post('/custom', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { title, content, url, byline } = req.body;
+    if (!content || typeof content !== 'string' || !content.trim()) {
+      res.status(400).json({ error: 'Article content cannot be empty.' });
+      return;
+    }
+
+    const { createCustomWebArticle } = await import('../services/webParser.js');
+    const parsed = createCustomWebArticle(title || 'Custom Article', content, url, byline);
+
+    const db = getDb();
+    const pageId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO web_pages (
+        id, url, title, byline, site_name, excerpt, content_html, text_content, cover_image,
+        reading_progress, estimated_reading_minutes, last_read_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).run(
+      pageId,
+      parsed.url || 'custom://' + pageId,
+      parsed.title,
+      parsed.byline,
+      parsed.siteName,
+      parsed.excerpt,
+      parsed.contentHtml,
+      parsed.textContent,
+      parsed.coverImage,
+      parsed.estimatedReadingMinutes,
+      now
+    );
+
+    const created = db.prepare('SELECT * FROM web_pages WHERE id = ?').get(pageId);
+    res.status(201).json(created);
+  } catch (err: any) {
+    console.error('Failed to save custom article:', err);
+    res.status(500).json({ error: err.message || 'Failed to save custom article.' });
+  }
+});
+
+/**
  * 3. 获取所有网页文章列表 (Collection)
  * GET /api/webpages
  */

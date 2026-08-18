@@ -20,7 +20,16 @@ interface WebPageItem {
 
 export default function WebHomePage() {
   const navigate = useNavigate();
+  const [importMode, setImportMode] = useState<'url' | 'paste'>('url');
+  
+  // URL 模式状态
   const [urlInput, setUrlInput] = useState('');
+  
+  // 粘贴模式状态
+  const [pasteTitle, setPasteTitle] = useState('');
+  const [pasteContent, setPasteContent] = useState('');
+  const [pasteSourceUrl, setPasteSourceUrl] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [recentPages, setRecentPages] = useState<WebPageItem[]>([]);
@@ -40,8 +49,8 @@ export default function WebHomePage() {
   }, []);
 
   // 提交 URL 导入并直接进入阅读
-  const handleImportAndRead = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleImportByUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!urlInput.trim()) return;
 
     setLoading(true);
@@ -57,7 +66,37 @@ export default function WebHomePage() {
       setUrlInput('');
       navigate(`/reading/web/read/${created.id}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch and parse webpage. Please check the URL.');
+      setError(err.message || 'Failed to fetch webpage. For complex LMS or login-required pages, try "Paste Content" tab!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 提交粘贴内容直接进入阅读
+  const handleImportByPaste = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pasteContent.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const created = await safeFetchJson<WebPageItem>('/api/webpages/custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: pasteTitle.trim() || 'Custom Article',
+          content: pasteContent.trim(),
+          url: pasteSourceUrl.trim() || undefined,
+        }),
+      });
+
+      setPasteTitle('');
+      setPasteContent('');
+      setPasteSourceUrl('');
+      navigate(`/reading/web/read/${created.id}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create article from pasted content.');
     } finally {
       setLoading(false);
     }
@@ -84,43 +123,107 @@ export default function WebHomePage() {
       {/* 二级页签 */}
       <ReadingNavTabs />
 
-      {/* URL 粘贴导入卡片 */}
+      {/* 导入卡片 (支持 URL 与 粘贴内容双模式) */}
       <div className="web-import-card card">
-        <div className="web-import-header">
-          <span className="web-import-icon">🌐</span>
-          <div>
-            <h2 className="web-import-title">Import Web Article</h2>
-            <p className="web-import-subtitle">Paste any article link (Medium, BBC, Substack, Tech blogs, etc.)</p>
+        <div className="web-import-header-row">
+          <div className="web-import-header-left">
+            <span className="web-import-icon">🌐</span>
+            <div>
+              <h2 className="web-import-title">Import Web Article</h2>
+              <p className="web-import-subtitle">Extract and read English content with full vocabulary lookup & sentence analysis</p>
+            </div>
+          </div>
+
+          {/* 模式切换 */}
+          <div className="web-mode-switch">
+            <button
+              type="button"
+              className={`mode-switch-btn ${importMode === 'url' ? 'active' : ''}`}
+              onClick={() => { setImportMode('url'); setError(''); }}
+            >
+              🔗 By URL
+            </button>
+            <button
+              type="button"
+              className={`mode-switch-btn ${importMode === 'paste' ? 'active' : ''}`}
+              onClick={() => { setImportMode('paste'); setError(''); }}
+            >
+              📋 Paste Content
+            </button>
           </div>
         </div>
 
-        <form className="web-import-form" onSubmit={handleImportAndRead}>
-          <div className="web-input-wrapper">
-            <input
-              type="url"
-              className="web-url-input"
-              placeholder="https://example.com/article..."
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              disabled={loading}
-              required
-            />
-            <button
-              type="submit"
-              className="btn btn-primary web-import-btn"
-              disabled={loading || !urlInput.trim()}
-            >
-              {loading ? (
-                <>
-                  <span className="btn-spinner" />
-                  Extracting...
-                </>
-              ) : (
-                'Import & Read'
-              )}
-            </button>
-          </div>
-        </form>
+        {importMode === 'url' ? (
+          <form className="web-import-form" onSubmit={handleImportByUrl}>
+            <div className="web-input-wrapper">
+              <input
+                type="url"
+                className="web-url-input"
+                placeholder="https://example.com/article..."
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                disabled={loading}
+                required
+              />
+              <button
+                type="submit"
+                className="btn btn-primary web-import-btn"
+                disabled={loading || !urlInput.trim()}
+              >
+                {loading ? (
+                  <>
+                    <span className="btn-spinner" />
+                    Extracting...
+                  </>
+                ) : (
+                  'Import & Read'
+                )}
+              </button>
+            </div>
+            <p className="import-hint-text">
+              💡 Works great with blogs, Medium, BBC, Substack, News, Wikipedia, etc.
+            </p>
+          </form>
+        ) : (
+          <form className="web-import-form" onSubmit={handleImportByPaste}>
+            <div className="paste-form-fields">
+              <input
+                type="text"
+                className="paste-title-input"
+                placeholder="Article Title (e.g., Understanding CRO - Shopify Academy)"
+                value={pasteTitle}
+                onChange={(e) => setPasteTitle(e.target.value)}
+                disabled={loading}
+              />
+              <textarea
+                className="paste-content-textarea"
+                placeholder="Paste the article text or webpage content here (supports full paragraphs, lists, and sections)..."
+                value={pasteContent}
+                onChange={(e) => setPasteContent(e.target.value)}
+                rows={6}
+                disabled={loading}
+                required
+              />
+              <div className="paste-footer-row">
+                <input
+                  type="url"
+                  className="paste-source-input"
+                  placeholder="Optional Original URL (for reference)"
+                  value={pasteSourceUrl}
+                  onChange={(e) => setPasteSourceUrl(e.target.value)}
+                  disabled={loading}
+                />
+                <button
+                  type="submit"
+                  className="btn btn-primary web-import-btn"
+                  disabled={loading || !pasteContent.trim()}
+                >
+                  {loading ? 'Creating...' : 'Save & Start Reading'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
 
         {error && <div className="web-error-alert">⚠️ {error}</div>}
       </div>
@@ -138,7 +241,7 @@ export default function WebHomePage() {
           <div className="web-home-empty card">
             <div className="web-home-empty-icon">📰</div>
             <p className="web-home-empty-text">No web articles yet</p>
-            <p className="web-home-empty-hint">Paste an English article URL above to start reading</p>
+            <p className="web-home-empty-hint">Paste an article URL or text above to start reading</p>
           </div>
         ) : (
           <div className="web-home-recent-grid">

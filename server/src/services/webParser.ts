@@ -16,11 +16,10 @@ export interface ParsedWebPage {
 
 /**
  * 智能网页内容抓取与正文解析引擎
- * 基于 Mozilla Readability 官方算法，自动过滤广告、导航、侧边栏，保留正文配图、视频与外链
+ * 支持智能降噪、iframe 穿透、手风琴折叠平铺与多媒体绝对路径补全
  */
 export async function parseWebArticle(targetUrl: string): Promise<ParsedWebPage> {
   const parsedUrl = new URL(targetUrl);
-  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
 
   // 1. 模拟现代浏览器抓取目标网页 HTML
   const response = await fetch(targetUrl, {
@@ -28,6 +27,7 @@ export async function parseWebArticle(targetUrl: string): Promise<ParsedWebPage>
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': `${parsedUrl.protocol}//${parsedUrl.host}`,
     },
   });
 
@@ -53,18 +53,40 @@ export async function parseWebArticle(targetUrl: string): Promise<ParsedWebPage>
     }
   }
 
-  // 3. 执行 Mozilla Readability 智能正文识别与降噪提取
+  // 3. 处理折叠手风琴区域 (Accordion / Details / Collapsible) - 确保折叠内容完全展开并保留
+  const detailsElements = doc.querySelectorAll('details');
+  detailsElements.forEach(d => {
+    d.setAttribute('open', 'true');
+  });
+
+  // 处理带有 aria-expanded 或 collapse 的隐藏容器，将其转换为可见块
+  const collapsedElements = doc.querySelectorAll('[aria-expanded="false"], .collapsed, .collapse:not(.show)');
+  collapsedElements.forEach(el => {
+    el.removeAttribute('hidden');
+    el.setAttribute('aria-expanded', 'true');
+  });
+
+  // 4. 执行 Mozilla Readability 智能正文识别与降噪提取
   const reader = new Readability(doc, {
     keepClasses: false,
   });
-  const article = reader.parse();
+  let article = reader.parse();
 
-  if (!article || !article.content) {
-    throw new Error('Unable to extract main readable article content from this webpage.');
+  // 5. 如果 Readability 提取结果过短（可能由于特殊 LMS 或嵌套框架结构），尝试从主要 content 容器兜底提取
+  let contentHtml = article?.content || '';
+  if (!contentHtml || (article && article.textContent && article.textContent.trim().length < 150)) {
+    const mainContainer = doc.querySelector('main, article, [role="main"], #content, .content, .course-content, .lesson-content');
+    if (mainContainer && mainContainer.textContent && mainContainer.textContent.trim().length > (article?.textContent?.length || 0)) {
+      contentHtml = mainContainer.innerHTML;
+    }
   }
 
-  // 4. 后处理正文 DOM：修复相对链接、图片绝对地址与媒体嵌入
-  const articleDom = new JSDOM(article.content, { url: targetUrl });
+  if (!contentHtml) {
+    throw new Error('Unable to extract readable article content from this webpage. You can also paste the text directly!');
+  }
+
+  // 6. 后处理正文 DOM：修复相对链接、图片绝对地址与媒体嵌入
+  const articleDom = new JSDOM(contentHtml, { url: targetUrl });
   const articleDoc = articleDom.window.document;
 
   // (1) 修复并补全所有 img 的 src 与 srcset 为绝对路径
@@ -76,7 +98,6 @@ export async function parseWebArticle(targetUrl: string): Promise<ParsedWebPage>
         img.setAttribute('src', new URL(src, targetUrl).href);
       } catch {}
     }
-    // 移除无用 lazy 属性或限制，确保图片直接加载
     img.removeAttribute('loading');
     img.removeAttribute('data-src');
     img.removeAttribute('srcset');
@@ -113,7 +134,7 @@ export async function parseWebArticle(targetUrl: string): Promise<ParsedWebPage>
     }
   });
 
-  // 5. 使用 DOMPurify 进行终极安全净化（允许保留必要富媒体标签）
+  // 7. 使用 DOMPurify 进行终极安全净化（允许保留必要富媒体标签）
   const cleanHtml = DOMPurify.sanitize(articleDoc.body.innerHTML, {
     ALLOWED_TAGS: [
       'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -121,29 +142,74 @@ export async function parseWebArticle(targetUrl: string): Promise<ParsedWebPage>
       'ul', 'ol', 'li', 'dl', 'dt', 'dd',
       'table', 'thead', 'tbody', 'tr', 'th', 'td',
       'img', 'figure', 'figcaption', 'picture', 'source',
-      'video', 'audio', 'iframe', 'hr', 'br', 'a', 'span', 'div'
+      'video', 'audio', 'iframe', 'hr', 'br', 'a', 'span', 'div',
+      'details', 'summary'
     ],
     ALLOWED_ATTR: [
       'src', 'href', 'target', 'rel', 'alt', 'title', 'class',
       'width', 'height', 'controls', 'autoplay', 'loop', 'muted', 'poster',
-      'allowfullscreen', 'frameborder', 'loading'
+      'allowfullscreen', 'frameborder', 'loading', 'open'
     ],
     ADD_ATTR: ['target'],
   });
 
-  // 6. 估算英文阅读耗时（以 200 词/分钟计）
-  const wordsCount = article.textContent ? article.textContent.trim().split(/\s+/).length : 0;
+  const finalDom = new JSDOM(cleanHtml);
+  const textContent = finalDom.window.document.body.textContent || '';
+  const wordsCount = textContent.trim().split(/\s+/).filter(Boolean).length;
   const estimatedMinutes = Math.max(1, Math.round(wordsCount / 200));
 
   return {
     url: targetUrl,
-    title: article.title || doc.title || 'Untitled Article',
-    byline: article.byline || null,
-    siteName: article.siteName || parsedUrl.hostname.replace(/^www\./, ''),
-    excerpt: article.excerpt || null,
+    title: article?.title || doc.title || 'Untitled Article',
+    byline: article?.byline || null,
+    siteName: article?.siteName || parsedUrl.hostname.replace(/^www\./, ''),
+    excerpt: article?.excerpt || null,
     contentHtml: cleanHtml,
-    textContent: article.textContent || '',
+    textContent,
     coverImage,
+    estimatedReadingMinutes: estimatedMinutes,
+  };
+}
+
+/**
+ * 直接从用户粘贴的纯文本或富文本快速生成文章
+ */
+export function createCustomWebArticle(title: string, rawTextOrHtml: string, sourceUrl?: string, author?: string): ParsedWebPage {
+  const isHtml = /<[a-z][\s\S]*>/i.test(rawTextOrHtml);
+  
+  let formattedHtml = '';
+  if (isHtml) {
+    formattedHtml = DOMPurify.sanitize(rawTextOrHtml, {
+      ALLOWED_TAGS: [
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'p', 'blockquote', 'pre', 'code', 'em', 'strong', 'i', 'b', 'u', 's',
+        'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        'img', 'figure', 'figcaption', 'hr', 'br', 'a', 'span', 'div', 'details', 'summary'
+      ],
+    });
+  } else {
+    // 将普通纯文本按段落转化为 <p>
+    const paragraphs = rawTextOrHtml
+      .split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(Boolean);
+    formattedHtml = paragraphs.map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`).join('');
+  }
+
+  const dom = new JSDOM(formattedHtml);
+  const textContent = dom.window.document.body.textContent || '';
+  const wordsCount = textContent.trim().split(/\s+/).filter(Boolean).length;
+  const estimatedMinutes = Math.max(1, Math.round(wordsCount / 200));
+
+  return {
+    url: sourceUrl || '',
+    title: title.trim() || 'Custom Article',
+    byline: author?.trim() || null,
+    siteName: sourceUrl ? (new URL(sourceUrl).hostname.replace(/^www\./, '')) : 'Custom Notes',
+    excerpt: textContent.substring(0, 160) + '...',
+    contentHtml: formattedHtml,
+    textContent,
+    coverImage: null,
     estimatedReadingMinutes: estimatedMinutes,
   };
 }
