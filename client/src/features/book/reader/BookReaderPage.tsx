@@ -221,17 +221,18 @@ export default function BookReaderPage() {
     setSelectionPosition({ x: posX, y: posY, placement });
   }, []);
 
-  // 辅助函数：向 rendition 挂载高亮及点击唤起工具栏回调 (严禁在 className 中使用空格以防 classList.add 抛出 DOMException 异常崩溃)
+  // 辅助函数：向 rendition 挂载下划线标注及点击唤起工具栏回调 (纯底部下划线 + 半透明通透底色，绝无四周封闭边框)
   const attachHighlightToRendition = useCallback((hl: HighlightItem) => {
     if (!renditionRef.current) return;
     const colorHex = HIGHLIGHT_COLOR_MAP[hl.color] || '#facc15';
     try {
       try {
         renditionRef.current.annotations.remove(hl.cfi_range, 'highlight');
+        renditionRef.current.annotations.remove(hl.cfi_range, 'underline');
       } catch {}
 
       renditionRef.current.annotations.add(
-        'highlight',
+        'underline',
         hl.cfi_range,
         { id: hl.id, color: hl.color },
         (e: MouseEvent) => {
@@ -240,10 +241,9 @@ export default function BookReaderPage() {
         'reader-highlight',
         {
           fill: colorHex,
-          'fill-opacity': '0.32',
-          'mix-blend-mode': 'normal',
+          'fill-opacity': '0.22',
           stroke: colorHex,
-          'stroke-width': '2px',
+          'stroke-width': '2.5px',
         }
       );
     } catch (err) {
@@ -911,7 +911,10 @@ export default function BookReaderPage() {
       await safeFetchJson(`/api/books/highlights/${highlightId}`, { method: 'DELETE' });
       setHighlights(prev => prev.filter(h => h.id !== highlightId));
       if (hl && renditionRef.current) {
-        renditionRef.current.annotations.remove(hl.cfi_range, 'highlight');
+        try {
+          renditionRef.current.annotations.remove(hl.cfi_range, 'highlight');
+          renditionRef.current.annotations.remove(hl.cfi_range, 'underline');
+        } catch {}
       }
     } catch (e) {
       console.error('Failed to delete highlight:', e);
