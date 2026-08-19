@@ -291,6 +291,56 @@ export default function BookReaderPage() {
         });
         renditionRef.current = rendition;
 
+        // 彻底修复 EPUB.js 在 spread 双栏分栏模式下最后一页/最后一段被误判跳章丢页的底层缺陷
+        const manager = (rendition as any).manager;
+        if (manager) {
+          const origNext = manager.next.bind(manager);
+          const origPrev = manager.prev.bind(manager);
+
+          manager.next = function () {
+            if (!this.views || !this.views.length) return Promise.resolve();
+
+            if (this.isPaginated && this.settings.axis === "horizontal") {
+              const container = this.container;
+              if (container) {
+                const currentScroll = container.scrollLeft;
+                const maxScroll = container.scrollWidth - container.offsetWidth;
+
+                // 只要当前章节右侧还有超过 3px 的内容未完全展示，就继续平移展示，绝不粗暴跳章丢内容！
+                if (currentScroll < maxScroll - 3) {
+                  const step = this.layout?.delta || container.offsetWidth;
+                  const targetScroll = Math.min(maxScroll, currentScroll + step);
+                  this.scrollTo(targetScroll, 0, true);
+                  return Promise.resolve();
+                }
+              }
+            }
+            // 当前章节确实已完全读到末尾，才翻入下一章节
+            return origNext();
+          };
+
+          manager.prev = function () {
+            if (!this.views || !this.views.length) return Promise.resolve();
+
+            if (this.isPaginated && this.settings.axis === "horizontal") {
+              const container = this.container;
+              if (container) {
+                const currentScroll = container.scrollLeft;
+
+                // 只要当前章节左侧还有未展示的内容，向前平移
+                if (currentScroll > 3) {
+                  const step = this.layout?.delta || container.offsetWidth;
+                  const targetScroll = Math.max(0, currentScroll - step);
+                  this.scrollTo(targetScroll, 0, true);
+                  return Promise.resolve();
+                }
+              }
+            }
+            // 当前章节确实已到达开头，翻回上一章节的末尾
+            return origPrev();
+          };
+        }
+
         // 暗色主题注入（强制高亮度浅灰白，消除 EPUB 自带的深黑/深蓝内联颜色，规整首字母悬空与段距）
         rendition.themes.register('dark', {
           '*': {
@@ -302,7 +352,7 @@ export default function BookReaderPage() {
             'font-family': "'Literata', 'Crimson Pro', Georgia, serif !important",
             'font-size': '21px !important', // 继续增大字号
             'line-height': '1.75 !important',
-            padding: '16px 28px !important',
+            padding: '16px 0 !important',
           },
           // 彻底解决首字下沉 (Drop Cap) 浮动漂移悬空问题
           '.dropcap, .drop-cap, .initial, .first-letter, span[class*="dropcap"], span[class*="initial"], span[class*="lettrine"], [class*="drop-cap"]': {
