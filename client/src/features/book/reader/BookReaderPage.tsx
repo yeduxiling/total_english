@@ -221,7 +221,7 @@ export default function BookReaderPage() {
     setSelectionPosition({ x: posX, y: posY, placement });
   }, []);
 
-  // 辅助函数：向 rendition 挂载高亮及点击唤起工具栏回调 (统一精致下划线与通透底色，显式覆盖 mix-blend-mode 为 normal 严防暗色模式下变黑隐形)
+  // 辅助函数：向 rendition 挂载高亮及点击唤起工具栏回调 (严禁在 className 中使用空格以防 classList.add 抛出 DOMException 异常崩溃)
   const attachHighlightToRendition = useCallback((hl: HighlightItem) => {
     if (!renditionRef.current) return;
     const colorHex = HIGHLIGHT_COLOR_MAP[hl.color] || '#facc15';
@@ -233,14 +233,14 @@ export default function BookReaderPage() {
       renditionRef.current.annotations.add(
         'highlight',
         hl.cfi_range,
-        {},
+        { id: hl.id, color: hl.color },
         (e: MouseEvent) => {
           openToolbarForHighlight(hl, e);
         },
-        `reader-highlight hl-${hl.color}`,
+        'reader-highlight',
         {
           fill: colorHex,
-          'fill-opacity': '0.3',
+          'fill-opacity': '0.32',
           'mix-blend-mode': 'normal',
           stroke: colorHex,
           'stroke-width': '2px',

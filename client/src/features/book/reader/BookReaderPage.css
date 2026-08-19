@@ -256,19 +256,23 @@
   }
 }
 
-/* ===== EPUB.js 划线高亮宿主 SVG 全局渲染系统 ===== */
-.reader-viewport svg,
-.epubjs-hl,
-.reader-highlight,
-g.reader-highlight,
-g[class*="reader-highlight"],
-g[class*="epubjs-hl"] {
-  pointer-events: auto !important;
-  cursor: pointer !important;
+/* ===== EPUB.js 划线高亮宿主 SVG 全局渲染系统 (严禁遮挡正文选区) ===== */
+.reader-viewport svg {
+  pointer-events: none !important;
+  cursor: default !important;
   overflow: visible !important;
   mix-blend-mode: normal !important;
 }
 
+.reader-viewport svg g,
+.reader-viewport svg g[class*="reader-highlight"],
+.reader-viewport svg g[class*="epubjs-hl"] {
+  pointer-events: none !important;
+  overflow: visible !important;
+  mix-blend-mode: normal !important;
+}
+
+/* 仅在具体的高亮矩形 rect 上启用手型与鼠标事件，绝不遮挡周围正文文字的选择 */
 .reader-viewport svg rect,
 g.reader-highlight rect,
 g.epubjs-hl rect {
@@ -276,38 +280,44 @@ g.epubjs-hl rect {
   ry: 3px !important;
   pointer-events: auto !important;
   cursor: pointer !important;
-  fill-opacity: 0.3 !important;
-  stroke-width: 2.5px !important;
+  fill-opacity: 0.32 !important;
+  stroke-width: 2px !important;
   paint-order: fill stroke !important;
 }
 
 /* 5 种主题色鲜明高亮与下划线 (宿主端) */
 .reader-viewport g.hl-yellow rect,
-.reader-viewport g[class*="hl-yellow"] rect {
-  fill: rgba(250, 204, 21, 0.3) !important;
+.reader-viewport g[class*="hl-yellow"] rect,
+.reader-viewport g[data-color="yellow"] rect {
+  fill: rgba(250, 204, 21, 0.32) !important;
   stroke: #facc15 !important;
 }
 
 .reader-viewport g.hl-green rect,
-.reader-viewport g[class*="hl-green"] rect {
-  fill: rgba(74, 222, 128, 0.3) !important;
+.reader-viewport g[class*="hl-green"] rect,
+.reader-viewport g[data-color="green"] rect {
+  fill: rgba(74, 222, 128, 0.32) !important;
   stroke: #4ade80 !important;
 }
 
 .reader-viewport g.hl-blue rect,
-.reader-viewport g[class*="hl-blue"] rect {
-  fill: rgba(96, 165, 250, 0.3) !important;
+.reader-viewport g[class*="hl-blue"] rect,
+.reader-viewport g[data-color="blue"] rect {
+  fill: rgba(96, 165, 250, 0.32) !important;
   stroke: #60a5fa !important;
 }
 
 .reader-viewport g.hl-pink rect,
-.reader-viewport g[class*="hl-pink"] rect {
-  fill: rgba(244, 114, 182, 0.3) !important;
+.reader-viewport g[class*="hl-pink"] rect,
+.reader-viewport g[data-color="pink"] rect {
+  fill: rgba(244, 114, 182, 0.32) !important;
   stroke: #f472b6 !important;
 }
 
 .reader-viewport g.hl-purple rect,
-.reader-viewport g[class*="hl-purple"] rect {
-  fill: rgba(192, 132, 252, 0.3) !important;
+.reader-viewport g[class*="hl-purple"] rect,
+.reader-viewport g[data-color="purple"] rect {
+  fill: rgba(192, 132, 252, 0.32) !important;
   stroke: #c084fc !important;
 }
+
