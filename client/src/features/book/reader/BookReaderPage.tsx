@@ -121,6 +121,7 @@ export default function BookReaderPage() {
   const renditionRef = useRef<Rendition | null>(null);
   const isHighlightClickedRef = useRef(false);
   const isMouseDownRef = useRef(false);
+  const isTurningPageRef = useRef(false);
   const pendingSelectionRef = useRef<{ cfiRange: string; contents: any } | null>(null);
 
   // 同步更新 highlightsRef
@@ -608,20 +609,19 @@ export default function BookReaderPage() {
           };
           contents.document.addEventListener('mousemove', handleMouseMove);
 
-          // 3. 注入 iframe 内部键盘左右翻页监听
+          // 3. 注入 iframe 内部键盘左右翻页监听（严防重复绑定与事件冒泡导致的双倍跳页）
           const handleIframeKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'ArrowLeft') {
               e.preventDefault();
+              e.stopPropagation();
               handlePrevPage();
             } else if (e.key === 'ArrowRight') {
               e.preventDefault();
+              e.stopPropagation();
               handleNextPage();
             }
           };
           contents.document.addEventListener('keydown', handleIframeKeyDown);
-          if (contents.window) {
-            contents.window.addEventListener('keydown', handleIframeKeyDown);
-          }
 
           // 鼠标按下时标记正在选择，并隐藏旧浮窗，防止遮挡正在划选的内容
           const handleMouseDown = () => {
@@ -737,30 +737,47 @@ export default function BookReaderPage() {
     };
   }, [bookId, bookData?.id]);
 
-  // 翻页控制
-  const handlePrevPage = () => {
+  // 翻页控制 (增加 280ms 严格防抖节流锁，防止连击、双击或键盘连按导致的跳屏丢页)
+  const handlePrevPage = useCallback(() => {
+    if (isTurningPageRef.current) return;
+    isTurningPageRef.current = true;
+    setTimeout(() => {
+      isTurningPageRef.current = false;
+    }, 280);
+
     setSelectionPosition(null);
     setActiveHighlightId(null);
     renditionRef.current?.prev();
-  };
+  }, []);
 
-  const handleNextPage = () => {
+  const handleNextPage = useCallback(() => {
+    if (isTurningPageRef.current) return;
+    isTurningPageRef.current = true;
+    setTimeout(() => {
+      isTurningPageRef.current = false;
+    }, 280);
+
     setSelectionPosition(null);
     setActiveHighlightId(null);
     renditionRef.current?.next();
-  };
+  }, []);
 
   // 键盘左右键翻页
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 弹窗开启时不触发键盘翻页
       if (showNoteModal || showLookupModal || showAnalysisModal || activePanel) return;
-      if (e.key === 'ArrowLeft') handlePrevPage();
-      if (e.key === 'ArrowRight') handleNextPage();
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrevPage();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNextPage();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showNoteModal, showLookupModal, showAnalysisModal, activePanel]);
+  }, [showNoteModal, showLookupModal, showAnalysisModal, activePanel, handlePrevPage, handleNextPage]);
 
   // 书签状态计算
   useEffect(() => {
