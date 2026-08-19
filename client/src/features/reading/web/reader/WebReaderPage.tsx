@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeFetchJson } from '../../../../utils/api.js';
+import { extractSentenceContext } from '../../../../utils/sentenceExtractor.js';
 import SelectionToolbar, { type HighlightColor, type SelectionPosition } from '../../../book/reader/SelectionToolbar.js';
 import LookupPanel from '../../../book/reader/LookupPanel.js';
 import SentenceAnalysisPanel from '../../../book/reader/SentenceAnalysisPanel.js';
@@ -41,6 +42,74 @@ interface WebNote {
   updated_at: string;
 }
 
+/**
+ * 动态安全高亮注入器：将已保存的划线高亮无损编译进文章 HTML 文本节点中
+ */
+function applyHighlightsToHtml(rawHtml: string, highlights: WebHighlight[]): string {
+  if (!rawHtml || !highlights || highlights.length === 0) return rawHtml;
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, 'text/html');
+
+    // 按文字从长到短排序，防止子字符串误优先匹配
+    const sortedHls = [...highlights].sort((a, b) => (b.text?.length || 0) - (a.text?.length || 0));
+
+    // 收集所有有效文本节点
+    const textNodes: Text[] = [];
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      const parentTag = (node.parentElement?.tagName || '').toLowerCase();
+      if (parentTag !== 'script' && parentTag !== 'style') {
+        textNodes.push(node as Text);
+      }
+    }
+
+    // 在文本节点中精准高亮匹配文字
+    for (const hl of sortedHls) {
+      if (!hl.text || hl.text.trim().length === 0) continue;
+      const targetText = hl.text.trim();
+
+      for (let i = 0; i < textNodes.length; i++) {
+        const textNode = textNodes[i];
+        const val = textNode.nodeValue || '';
+        const idx = val.indexOf(targetText);
+
+        if (idx !== -1) {
+          const before = val.substring(0, idx);
+          const match = val.substring(idx, idx + targetText.length);
+          const after = val.substring(idx + targetText.length);
+
+          const mark = doc.createElement('mark');
+          mark.className = `web-reader-hl hl-${hl.color || 'yellow'}`;
+          mark.setAttribute('data-hl-id', hl.id);
+          mark.setAttribute('data-hl-color', hl.color || 'yellow');
+          mark.textContent = match;
+
+          const parent = textNode.parentNode;
+          if (parent) {
+            if (before) parent.insertBefore(doc.createTextNode(before), textNode);
+            parent.insertBefore(mark, textNode);
+            if (after) {
+              const afterNode = doc.createTextNode(after);
+              parent.insertBefore(afterNode, textNode);
+              textNodes.push(afterNode);
+            }
+            parent.removeChild(textNode);
+          }
+          break;
+        }
+      }
+    }
+
+    return doc.body.innerHTML;
+  } catch (err) {
+    console.warn('Failed to apply highlights to HTML:', err);
+    return rawHtml;
+  }
+}
+
 export default function WebReaderPage() {
   const { id: pageId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -51,8 +120,9 @@ export default function WebReaderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // 选区与浮窗
+  // 选区与语境
   const [selectedText, setSelectedText] = useState('');
+  const [sentenceContext, setSentenceContext] = useState('');
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
   const [selectionPosition, setSelectionPosition] = useState<SelectionPosition | null>(null);
   const [activeDrawer, setActiveDrawer] = useState<'notes' | null>(null);
@@ -91,7 +161,13 @@ export default function WebReaderPage() {
     fetchArticle();
   }, [fetchArticle]);
 
-  // 2. 选区检测与浮窗定位
+  // 动态编译带高亮标签的正文 HTML
+  const compiledContentHtml = useMemo(() => {
+    if (!page?.content_html) return '';
+    return applyHighlightsToHtml(page.content_html, highlights);
+  }, [page?.content_html, highlights]);
+
+  // 2. 选区检测与浮窗定位（智能提取单词所在的完整句子语境）
   const handleMouseUp = () => {
     isMouseDownRef.current = false;
     setTimeout(() => {
@@ -110,7 +186,11 @@ export default function WebReaderPage() {
       const placement: 'top' | 'bottom' = isTopEdge ? 'bottom' : 'top';
       const posY = isTopEdge ? rect.bottom : rect.top;
 
+      // 核心：智能提取包含选区单词的完整英文句子
+      const fullSentence = extractSentenceContext(selection, text);
+
       setSelectedText(text);
+      setSentenceContext(fullSentence);
       setActiveHighlightId(null);
       setSelectionPosition({ x: posX, y: posY, placement });
     }, 30);
@@ -121,29 +201,69 @@ export default function WebReaderPage() {
     setSelectionPosition(null);
   };
 
-  // 3. 创建划线高亮
-  const handleCreateHighlight = async (color: HighlightColor) => {
-    if (!pageId || !selectedText) return;
-    try {
-      const created = await safeFetchJson<WebHighlight>(`/api/webpages/${pageId}/highlights`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: selectedText,
-          color,
-          rangeInfo: JSON.stringify({ timestamp: Date.now() }),
-        }),
-      });
+  // 3. 点击已有划线唤起工具栏
+  const handleContentClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const markEl = target.closest('mark.web-reader-hl, .web-reader-hl') as HTMLElement | null;
 
-      setHighlights(prev => [created, ...prev]);
-      setSelectionPosition(null);
-      window.getSelection()?.removeAllRanges();
-    } catch (err: any) {
-      console.error('Failed to create highlight:', err);
+    if (markEl) {
+      e.stopPropagation();
+      const hlId = markEl.getAttribute('data-hl-id');
+      const hlText = markEl.textContent || '';
+      const matchedHl = highlights.find(h => h.id === hlId);
+
+      const rect = markEl.getBoundingClientRect();
+      const posX = rect.left + rect.width / 2;
+      const isTopEdge = rect.top < 130;
+      const placement: 'top' | 'bottom' = isTopEdge ? 'bottom' : 'top';
+      const posY = isTopEdge ? rect.bottom : rect.top;
+
+      // 从段落中提取句子语境
+      const blockEl = markEl.closest('p, li, blockquote, div, h1, h2, h3, h4, h5, h6') as HTMLElement | null;
+      const blockText = (blockEl?.textContent || '').replace(/\s+/g, ' ').trim();
+
+      setSelectedText(hlText || matchedHl?.text || '');
+      setSentenceContext(blockText || hlText);
+      setActiveHighlightId(hlId || null);
+      setSelectionPosition({ x: posX, y: posY, placement });
     }
   };
 
-  // 4. 删除划线
+  // 4. 创建或更新划线高亮
+  const handleCreateHighlight = async (color: HighlightColor) => {
+    if (!pageId || !selectedText) return;
+
+    try {
+      if (activeHighlightId) {
+        // 更新已有划线的颜色
+        const updated = await safeFetchJson<WebHighlight>(`/api/webpages/highlights/${activeHighlightId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ color }),
+        });
+        setHighlights(prev => prev.map(h => h.id === activeHighlightId ? { ...h, color: updated.color || color } : h));
+      } else {
+        // 创建新划线
+        const created = await safeFetchJson<WebHighlight>(`/api/webpages/${pageId}/highlights`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: selectedText,
+            color,
+            rangeInfo: JSON.stringify({ timestamp: Date.now() }),
+          }),
+        });
+        setHighlights(prev => [created, ...prev]);
+      }
+
+      setSelectionPosition(null);
+      window.getSelection()?.removeAllRanges();
+    } catch (err: any) {
+      console.error('Failed to create/update highlight:', err);
+    }
+  };
+
+  // 5. 删除划线
   const handleDeleteHighlight = async (hlId: string) => {
     try {
       await safeFetchJson(`/api/webpages/highlights/${hlId}`, { method: 'DELETE' });
@@ -154,7 +274,7 @@ export default function WebReaderPage() {
     }
   };
 
-  // 5. 保存笔记
+  // 6. 保存笔记
   const handleSaveNote = async (content: string) => {
     if (!pageId || !selectedText) return;
     try {
@@ -185,19 +305,26 @@ export default function WebReaderPage() {
     }
   };
 
-  // 6. 点击已有划线唤起工具栏
-  const handleHighlightClick = (hl: WebHighlight, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const targetEl = e.currentTarget as HTMLElement;
-    const rect = targetEl.getBoundingClientRect();
-    const posX = rect.left + rect.width / 2;
-    const isTopEdge = rect.top < 130;
-    const placement: 'top' | 'bottom' = isTopEdge ? 'bottom' : 'top';
-    const posY = isTopEdge ? rect.bottom : rect.top;
+  // 7. 从抽屉中点击高亮
+  const handleDrawerHighlightClick = (hl: WebHighlight) => {
+    // 页面滚动定位到该高亮文字
+    if (contentContainerRef.current) {
+      const markEl = contentContainerRef.current.querySelector(`mark[data-hl-id="${hl.id}"]`) as HTMLElement | null;
+      if (markEl) {
+        markEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const rect = markEl.getBoundingClientRect();
+        const posX = rect.left + rect.width / 2;
+        const isTopEdge = rect.top < 130;
+        const placement: 'top' | 'bottom' = isTopEdge ? 'bottom' : 'top';
+        const posY = isTopEdge ? rect.bottom : rect.top;
 
-    setSelectedText(hl.text);
-    setActiveHighlightId(hl.id);
-    setSelectionPosition({ x: posX, y: posY, placement });
+        const blockEl = markEl.closest('p, li, blockquote, div, h1, h2, h3, h4, h5, h6') as HTMLElement | null;
+        setSelectedText(hl.text);
+        setSentenceContext(blockEl?.textContent || hl.text);
+        setActiveHighlightId(hl.id);
+        setSelectionPosition({ x: posX, y: posY, placement });
+      }
+    }
   };
 
   return (
@@ -264,7 +391,8 @@ export default function WebReaderPage() {
               className="web-article-content"
               onMouseDown={handleMouseDown}
               onMouseUp={handleMouseUp}
-              dangerouslySetInnerHTML={{ __html: page.content_html }}
+              onClick={handleContentClick}
+              dangerouslySetInnerHTML={{ __html: compiledContentHtml }}
             />
           </div>
         )}
@@ -315,7 +443,7 @@ export default function WebReaderPage() {
                   <div
                     key={hl.id}
                     className={`drawer-hl-item hl-${hl.color}`}
-                    onClick={(e) => handleHighlightClick(hl, e)}
+                    onClick={() => handleDrawerHighlightClick(hl)}
                   >
                     <div className="drawer-hl-top">
                       <span className="drawer-hl-badge">Highlight</span>
@@ -362,19 +490,19 @@ export default function WebReaderPage() {
         onSave={handleSaveNote}
       />
 
-      {/* 语境查词 Lookup 弹窗 */}
+      {/* 语境查词 Lookup 弹窗 (传入真实完整的句子语境与单词) */}
       <LookupPanel
         isOpen={showLookupModal}
         selectedText={selectedText}
-        sentenceContext={selectedText}
+        sentenceContext={sentenceContext || selectedText}
         bookTitle={page?.title || 'Web Article'}
         onClose={() => setShowLookupModal(false)}
       />
 
-      {/* 句子深度意群语法分析弹窗 */}
+      {/* 句子深度意群语法分析弹窗 (传入整句) */}
       <SentenceAnalysisPanel
         isOpen={showAnalysisModal}
-        sentenceText={selectedText}
+        sentenceText={sentenceContext || selectedText}
         bookTitle={page?.title || 'Web Article'}
         onClose={() => setShowAnalysisModal(false)}
       />

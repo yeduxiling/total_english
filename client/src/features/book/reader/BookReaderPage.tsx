@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ePub, { type Book as EpubBook, type Rendition } from 'epubjs';
 import { safeFetchJson } from '../../../utils/api.js';
 import { getMainTitle } from '../../../utils/bookTitle.js';
+import { extractSentenceContext } from '../../../utils/sentenceExtractor.js';
 import SelectionToolbar, { type HighlightColor, type SelectionPosition } from './SelectionToolbar.js';
 import BookmarkZone from './BookmarkZone.js';
 import NotesSidePanel, {
@@ -107,6 +108,7 @@ export default function BookReaderPage() {
 
   // 选中文本与浮动工具栏
   const [selectedText, setSelectedText] = useState('');
+  const [sentenceContext, setSentenceContext] = useState('');
   const [selectedCfiRange, setSelectedCfiRange] = useState('');
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
   const [selectionPosition, setSelectionPosition] = useState<SelectionPosition | null>(null);
@@ -535,7 +537,11 @@ export default function BookReaderPage() {
           const placement: 'top' | 'bottom' = isTopEdge ? 'bottom' : 'top';
           const posY = isTopEdge ? targetBottom : targetTop;
 
+          // 智能提取包含选区单词的完整英文句子
+          const fullSentence = extractSentenceContext(selection, text);
+
           setSelectedText(text);
+          setSentenceContext(fullSentence);
           setSelectedCfiRange(cfiRange);
           setActiveHighlightId(null);
           setSelectionPosition({ x: posX, y: posY, placement });
@@ -1067,7 +1073,7 @@ export default function BookReaderPage() {
       <LookupPanel
         isOpen={showLookupModal}
         selectedText={selectedText}
-        sentenceContext={selectedText}
+        sentenceContext={sentenceContext || selectedText}
         bookTitle={getMainTitle(bookData?.title)}
         onClose={() => setShowLookupModal(false)}
       />
@@ -1075,7 +1081,7 @@ export default function BookReaderPage() {
       {/* 句子深度意群语法分析弹窗 */}
       <SentenceAnalysisPanel
         isOpen={showAnalysisModal}
-        sentenceText={selectedText}
+        sentenceText={sentenceContext || selectedText}
         bookTitle={getMainTitle(bookData?.title)}
         onClose={() => setShowAnalysisModal(false)}
       />
