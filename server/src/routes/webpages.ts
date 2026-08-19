@@ -596,6 +596,19 @@ webpagesRouter.post('/:id/highlights', (req: Request, res: Response): void => {
   }
 });
 
+webpagesRouter.patch('/highlights/:highlightId', (req: Request, res: Response): void => {
+  try {
+    const { highlightId } = req.params;
+    const { color } = req.body;
+    const db = getDb();
+    db.prepare('UPDATE web_page_highlights SET color = ? WHERE id = ?').run(color || 'yellow', highlightId);
+    const updated = db.prepare('SELECT * FROM web_page_highlights WHERE id = ?').get(highlightId);
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 webpagesRouter.delete('/highlights/:highlightId', (req: Request, res: Response): void => {
   try {
     const { highlightId } = req.params;

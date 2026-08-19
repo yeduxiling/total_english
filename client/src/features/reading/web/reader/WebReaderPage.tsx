@@ -44,6 +44,7 @@ interface WebNote {
 
 /**
  * 动态安全高亮注入器：将已保存的划线高亮无损编译进文章 HTML 文本节点中
+ * 支持同一段落甚至同一句子中标记多个不同的专有名词/划线，原子安全替换
  */
 function applyHighlightsToHtml(rawHtml: string, highlights: WebHighlight[]): string {
   if (!rawHtml || !highlights || highlights.length === 0) return rawHtml;
@@ -55,28 +56,29 @@ function applyHighlightsToHtml(rawHtml: string, highlights: WebHighlight[]): str
     // 按文字从长到短排序，防止子字符串误优先匹配
     const sortedHls = [...highlights].sort((a, b) => (b.text?.length || 0) - (a.text?.length || 0));
 
-    // 收集所有有效文本节点
-    const textNodes: Text[] = [];
-    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
-    let node: Node | null;
-    while ((node = walker.nextNode())) {
-      const parentTag = (node.parentElement?.tagName || '').toLowerCase();
-      if (parentTag !== 'script' && parentTag !== 'style') {
-        textNodes.push(node as Text);
-      }
-    }
-
-    // 在文本节点中精准高亮匹配文字
+    // 针对每个划线，动态重新扫描当前 live DOM 树中的文本节点进行原子替换
     for (const hl of sortedHls) {
-      if (!hl.text || hl.text.trim().length === 0) continue;
+      if (!hl.text || !hl.text.trim()) continue;
       const targetText = hl.text.trim();
 
-      for (let i = 0; i < textNodes.length; i++) {
-        const textNode = textNodes[i];
-        const val = textNode.nodeValue || '';
+      const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
+      let node: Node | null;
+      let matched = false;
+
+      while (!matched && (node = walker.nextNode())) {
+        const parentEl = node.parentElement;
+        const parentTag = (parentEl?.tagName || '').toLowerCase();
+        // 避开 script, style 以及已经高亮过的 mark 内部
+        if (parentTag === 'script' || parentTag === 'style' || parentTag === 'mark') continue;
+
+        const val = node.nodeValue || '';
         const idx = val.indexOf(targetText);
 
         if (idx !== -1) {
+          const textNode = node as Text;
+          const parent = textNode.parentNode;
+          if (!parent) continue;
+
           const before = val.substring(0, idx);
           const match = val.substring(idx, idx + targetText.length);
           const after = val.substring(idx + targetText.length);
@@ -87,25 +89,20 @@ function applyHighlightsToHtml(rawHtml: string, highlights: WebHighlight[]): str
           mark.setAttribute('data-hl-color', hl.color || 'yellow');
           mark.textContent = match;
 
-          const parent = textNode.parentNode;
-          if (parent) {
-            if (before) parent.insertBefore(doc.createTextNode(before), textNode);
-            parent.insertBefore(mark, textNode);
-            if (after) {
-              const afterNode = doc.createTextNode(after);
-              parent.insertBefore(afterNode, textNode);
-              textNodes.push(afterNode);
-            }
-            parent.removeChild(textNode);
-          }
-          break;
+          const frag = doc.createDocumentFragment();
+          if (before) frag.appendChild(doc.createTextNode(before));
+          frag.appendChild(mark);
+          if (after) frag.appendChild(doc.createTextNode(after));
+
+          parent.replaceChild(frag, textNode);
+          matched = true;
         }
       }
     }
 
     return doc.body.innerHTML;
   } catch (err) {
-    console.warn('Failed to apply highlights to HTML:', err);
+    console.error('Failed to apply highlights to HTML:', err);
     return rawHtml;
   }
 }
@@ -257,6 +254,7 @@ export default function WebReaderPage() {
       }
 
       setSelectionPosition(null);
+      setActiveHighlightId(null);
       window.getSelection()?.removeAllRanges();
     } catch (err: any) {
       console.error('Failed to create/update highlight:', err);
@@ -269,6 +267,7 @@ export default function WebReaderPage() {
       await safeFetchJson(`/api/webpages/highlights/${hlId}`, { method: 'DELETE' });
       setHighlights(prev => prev.filter(h => h.id !== hlId));
       setSelectionPosition(null);
+      setActiveHighlightId(null);
     } catch (err: any) {
       console.error('Failed to delete highlight:', err);
     }
