@@ -356,7 +356,7 @@
   line-height: 1.5;
 }
 
-/* ===== 正文划线高亮渲染与悬停交互 ===== */
+/* ===== 正文划线高亮渲染与悬停交互 (极致对比度与锐利下划线) ===== */
 .web-reader-hl,
 mark.web-reader-hl {
   cursor: pointer !important;
@@ -364,43 +364,45 @@ mark.web-reader-hl {
   padding: 1px 3px;
   margin: 0 -1px;
   transition: filter 0.15s ease, background-color 0.15s ease;
-  color: inherit !important;
+  color: #ffffff !important; /* 强制纯白文字，消除被颜色糊掉的问题 */
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85); /* 增加锐利暗色阴影，文字轮廓极度清晰 */
   display: inline;
 }
 
 .web-reader-hl:hover,
 mark.web-reader-hl:hover {
-  filter: brightness(1.25);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+  filter: brightness(1.2);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .web-reader-hl.hl-yellow,
 mark.web-reader-hl.hl-yellow {
-  background-color: rgba(250, 204, 21, 0.38) !important;
-  border-bottom: 2px solid rgba(250, 204, 21, 0.85);
+  background-color: rgba(250, 204, 21, 0.22) !important;
+  border-bottom: 2.5px solid #facc15 !important;
 }
 
 .web-reader-hl.hl-green,
 mark.web-reader-hl.hl-green {
-  background-color: rgba(74, 222, 128, 0.35) !important;
-  border-bottom: 2px solid rgba(74, 222, 128, 0.85);
+  background-color: rgba(74, 222, 128, 0.22) !important;
+  border-bottom: 2.5px solid #4ade80 !important;
 }
 
 .web-reader-hl.hl-blue,
 mark.web-reader-hl.hl-blue {
-  background-color: rgba(96, 165, 250, 0.35) !important;
-  border-bottom: 2px solid rgba(96, 165, 250, 0.85);
+  background-color: rgba(96, 165, 250, 0.22) !important;
+  border-bottom: 2.5px solid #60a5fa !important;
 }
 
 .web-reader-hl.hl-pink,
 mark.web-reader-hl.hl-pink {
-  background-color: rgba(244, 114, 182, 0.35) !important;
-  border-bottom: 2px solid rgba(244, 114, 182, 0.85);
+  background-color: rgba(244, 114, 182, 0.22) !important;
+  border-bottom: 2.5px solid #f472b6 !important;
 }
 
 .web-reader-hl.hl-purple,
 mark.web-reader-hl.hl-purple {
-  background-color: rgba(192, 132, 252, 0.35) !important;
-  border-bottom: 2px solid rgba(192, 132, 252, 0.85);
+  background-color: rgba(192, 132, 252, 0.22) !important;
+  border-bottom: 2.5px solid #c084fc !important;
 }
 

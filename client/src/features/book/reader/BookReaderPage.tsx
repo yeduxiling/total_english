@@ -221,9 +221,10 @@ export default function BookReaderPage() {
     setSelectionPosition({ x: posX, y: posY, placement });
   }, []);
 
-  // 辅助函数：向 rendition 挂载高亮及点击唤起工具栏回调
+  // 辅助函数：向 rendition 挂载高亮及点击唤起工具栏回调 (统一精致下划线与通透底色)
   const attachHighlightToRendition = useCallback((hl: HighlightItem) => {
     if (!renditionRef.current) return;
+    const colorHex = HIGHLIGHT_COLOR_MAP[hl.color] || '#facc15';
     try {
       renditionRef.current.annotations.add(
         'highlight',
@@ -232,8 +233,13 @@ export default function BookReaderPage() {
         (e: MouseEvent) => {
           openToolbarForHighlight(hl, e);
         },
-        'reader-highlight',
-        { fill: HIGHLIGHT_COLOR_MAP[hl.color] || '#facc15', 'fill-opacity': '0.35' }
+        `reader-highlight hl-${hl.color}`,
+        {
+          fill: colorHex,
+          'fill-opacity': '0.22',
+          stroke: colorHex,
+          'stroke-width': '2.5px',
+        }
       );
     } catch {}
   }, [openToolbarForHighlight]);
@@ -344,14 +350,14 @@ export default function BookReaderPage() {
           };
         }
 
-        // 暗色主题注入（强制高亮度浅灰白，消除 EPUB 自带的深黑/深蓝内联颜色，规整首字母悬空与段距）
+        // 暗色主题注入（强制高对比度清晰浅白 #e6edf3，消除 EPUB 自带的深黑内联颜色，规整首字母悬空与段距）
         rendition.themes.register('dark', {
           '*': {
-            'color': '#d1d5db !important',
+            'color': '#e6edf3 !important',
           },
           body: {
             background: 'transparent !important',
-            color: '#d1d5db !important',
+            color: '#e6edf3 !important',
             'font-family': "'Literata', 'Crimson Pro', Georgia, serif !important",
             'font-size': '21px !important', // 继续增大字号
             'line-height': '1.75 !important',
@@ -370,7 +376,7 @@ export default function BookReaderPage() {
           },
           // 封面与章节标题强制居中且清除首行缩进
           'h1, h2, h3, h4, h5, h6, .title, .book-title, .chapter-title, .booktitle, [class*="title"]': {
-            color: '#f3f4f6 !important',
+            color: '#ffffff !important',
             'font-weight': '700 !important',
             'text-align': 'center !important',
             'margin-left': 'auto !important',
@@ -382,7 +388,7 @@ export default function BookReaderPage() {
             'display': 'block !important',
           },
           'p, span, div, li, em, strong, b, i, blockquote, dt, dd': {
-            color: '#d1d5db !important',
+            color: '#e6edf3 !important',
             'line-height': '1.75 !important',
           },
           'p': {
@@ -403,7 +409,7 @@ export default function BookReaderPage() {
           '::selection': {
             background: 'rgba(99, 102, 241, 0.45) !important',
           },
-          // 鼠标悬停已划线内容时呈现手型
+          // 统一微信读书风格高亮悬停手型与通透下划线
           '.reader-highlight, .epubjs-hl, svg.epubjs-hl, svg.epubjs-hl *, span.reader-highlight, [class*="reader-highlight"], [class*="epubjs-hl"]': {
             'cursor': 'pointer !important',
             'pointer-events': 'auto !important',
@@ -551,7 +557,7 @@ export default function BookReaderPage() {
         rendition.hooks.content.register((contents: any) => {
           if (!contents || !contents.document) return;
 
-          // 1. 动态向 iframe head 注入最高优先级手型样式
+          // 1. 动态向 iframe head 注入精致下划线、通透高亮与手型样式
           try {
             const styleEl = contents.document.createElement('style');
             styleEl.setAttribute('id', 'epubjs-highlight-cursor-fix');
@@ -559,13 +565,37 @@ export default function BookReaderPage() {
               .reader-highlight,
               .epubjs-hl,
               svg.epubjs-hl,
-              svg.epubjs-hl *,
-              svg.epubjs-hl rect,
-              svg.epubjs-hl path,
-              [class*="reader-highlight"],
-              [class*="epubjs-hl"] {
+              svg.epubjs-hl * {
                 cursor: pointer !important;
                 pointer-events: auto !important;
+                overflow: visible !important;
+              }
+              svg.epubjs-hl rect {
+                rx: 3px !important;
+                ry: 3px !important;
+                fill-opacity: 0.22 !important;
+                stroke-width: 2.5px !important;
+                paint-order: fill stroke !important;
+              }
+              svg.epubjs-hl.hl-yellow rect, svg.epubjs-hl[data-color="yellow"] rect {
+                fill: rgba(250, 204, 21, 0.22) !important;
+                stroke: #facc15 !important;
+              }
+              svg.epubjs-hl.hl-green rect, svg.epubjs-hl[data-color="green"] rect {
+                fill: rgba(74, 222, 128, 0.22) !important;
+                stroke: #4ade80 !important;
+              }
+              svg.epubjs-hl.hl-blue rect, svg.epubjs-hl[data-color="blue"] rect {
+                fill: rgba(96, 165, 250, 0.22) !important;
+                stroke: #60a5fa !important;
+              }
+              svg.epubjs-hl.hl-pink rect, svg.epubjs-hl[data-color="pink"] rect {
+                fill: rgba(244, 114, 182, 0.22) !important;
+                stroke: #f472b6 !important;
+              }
+              svg.epubjs-hl.hl-purple rect, svg.epubjs-hl[data-color="purple"] rect {
+                fill: rgba(192, 132, 252, 0.22) !important;
+                stroke: #c084fc !important;
               }
             `;
             contents.document.head?.appendChild(styleEl);
