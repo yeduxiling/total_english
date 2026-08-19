@@ -218,7 +218,7 @@ export default function WebHomePage() {
               <div className="clipper-badge-top-row">
                 <span className="clipper-step-badge">🚀 1-Click Web Clipper Extension</span>
                 <a
-                  href="/downloads/total-english-clipper.zip"
+                  href="/api/webpages/extension/download"
                   download="total-english-clipper.zip"
                   className="clipper-download-btn"
                 >

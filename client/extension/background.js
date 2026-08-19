@@ -1,5 +1,73 @@
+// 获取配置的服务器根地址
+async function getServerUrl() {
+  const stored = await chrome.storage.local.get(['serverUrl']);
+  if (stored.serverUrl && stored.serverUrl.trim()) {
+    return stored.serverUrl.trim().replace(/\/+$/, '');
+  }
+  try {
+    const res = await fetch(chrome.runtime.getURL('config.json'));
+    const json = await res.json();
+    if (json.serverUrl && json.serverUrl.trim()) {
+      return json.serverUrl.trim().replace(/\/+$/, '');
+    }
+  } catch {}
+  return 'http://localhost:5173';
+}
+
+// 向页面注入半透明 Toast 提示
+function showPageToast(tabId, message, type) {
+  chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    func: (msg, toastType) => {
+      const existing = document.getElementById('total-english-toast');
+      if (existing) existing.remove();
+
+      const toast = document.createElement('div');
+      toast.id = 'total-english-toast';
+      toast.style.position = 'fixed';
+      toast.style.top = '24px';
+      toast.style.right = '24px';
+      toast.style.zIndex = '99999999';
+      toast.style.padding = '14px 20px';
+      toast.style.borderRadius = '10px';
+      toast.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      toast.style.fontSize = '14px';
+      toast.style.fontWeight = '600';
+      toast.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.5)';
+      toast.style.transition = 'all 0.3s ease';
+      toast.style.display = 'flex';
+      toast.style.alignItems = 'center';
+      toast.style.gap = '10px';
+
+      if (toastType === 'success') {
+        toast.style.background = '#10b981';
+        toast.style.color = '#ffffff';
+      } else if (toastType === 'error') {
+        toast.style.background = '#ef4444';
+        toast.style.color = '#ffffff';
+      } else {
+        toast.style.background = '#6366f1';
+        toast.style.color = '#ffffff';
+      }
+
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 400);
+      }, toastType === 'error' ? 6000 : 3000);
+    },
+    args: [message, type],
+  }).catch(() => {});
+}
+
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab || !tab.id) return;
+
+  const serverUrl = await getServerUrl();
+  showPageToast(tab.id, '⏳ Expanding accordions & clipping content...', 'info');
 
   try {
     // 注入提取脚本到当前页面的所有 frame（包括跨域 iframe）
@@ -92,11 +160,11 @@ chrome.action.onClicked.addListener(async (tab) => {
     });
 
     if (!results || results.length === 0) {
-      console.warn('Total English Clipper: No frames found.');
+      showPageToast(tab.id, '❌ No frame content found on this page.', 'error');
       return;
     }
 
-    // 在所有 frame 中找出正文字数最丰富的 frame（解决课件嵌入在 iframe 内部的问题）
+    // 在所有 frame 中找出正文字数最丰富的 frame
     let bestResult = null;
     for (const r of results) {
       if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) {
@@ -105,12 +173,13 @@ chrome.action.onClicked.addListener(async (tab) => {
     }
 
     if (!bestResult || !bestResult.contentHtml || bestResult.textLen < 20) {
-      console.warn('Total English Clipper: Content too short or empty.');
+      showPageToast(tab.id, '⚠️ Content is empty or too short to clip.', 'error');
       return;
     }
 
-    // 发送给本地 Total English 后端
-    const response = await fetch('http://localhost:3001/api/webpages/clip', {
+    // 发送给 Total English 后端 API (/api/webpages/clip)
+    const clipApiUrl = serverUrl + '/api/webpages/clip';
+    const response = await fetch(clipApiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -122,17 +191,21 @@ chrome.action.onClicked.addListener(async (tab) => {
     });
 
     if (!response.ok) {
-      throw new Error('Server returned status ' + response.status);
+      throw new Error('Server returned HTTP ' + response.status + ' (' + clipApiUrl + ')');
     }
 
     const created = await response.json();
     if (created && created.id) {
-      // 自动在浏览器中打开沉浸式阅读器
+      showPageToast(tab.id, '🎉 Clipped successfully! Opening reader...', 'success');
+      // 自动在浏览器新标签页中打开沉浸式阅读器
       chrome.tabs.create({
-        url: 'http://localhost:5173/reading/web/read/' + created.id,
+        url: `${serverUrl}/reading/web/read/${created.id}`,
       });
     }
   } catch (err) {
     console.error('Total English Clipper Error:', err);
+    showPageToast(tab.id, `❌ Failed to connect to ${serverUrl}: ${err.message}`, 'error');
+    // 如果连接失败，自动打开选项页面引导用户查看或修改服务器地址
+    chrome.runtime.openOptionsPage();
   }
 });

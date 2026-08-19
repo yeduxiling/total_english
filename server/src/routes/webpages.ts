@@ -61,6 +61,86 @@ webpagesRouter.post('/clip', async (req: Request, res: Response): Promise<void> 
 });
 
 /**
+ * 0.1 动态打包并下载 Total English 浏览器扩展 (.zip)
+ * GET /api/webpages/extension/download
+ * 自动将 config.json 中的 serverUrl 替换为当前访问的服务器域名！
+ */
+webpagesRouter.get('/extension/download', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const AdmZip = (await import('adm-zip')).default;
+
+    // 智能获取当前站点的真实外部访问地址（支持 Nginx 反向代理头）
+    const forwardedProto = (req.headers['x-forwarded-proto'] as string) || '';
+    const protocol = forwardedProto.split(',')[0].trim() || req.protocol || 'http';
+    const forwardedHost = (req.headers['x-forwarded-host'] as string) || '';
+    const host = forwardedHost.split(',')[0].trim() || req.get('host') || 'localhost:5173';
+    
+    // 如果是开发环境端口 3001，前端对应端口为 5173
+    let serverOrigin = `${protocol}://${host}`;
+    if (host === 'localhost:3001' || host === '127.0.0.1:3001') {
+      serverOrigin = 'http://localhost:5173';
+    }
+
+    const zip = new AdmZip();
+
+    // 确定 extension 源码目录位置
+    // 在开发环境或容器环境中查找 client/extension 目录
+    const possibleDirs = [
+      path.resolve(process.cwd(), '../client/extension'),
+      path.resolve(process.cwd(), 'client/extension'),
+      path.resolve('/app/client/extension'),
+      path.resolve(process.cwd(), 'dist/extension'),
+    ];
+
+    let extDir = possibleDirs.find(d => fs.existsSync(d));
+
+    if (extDir && fs.existsSync(extDir)) {
+      const files = fs.readdirSync(extDir);
+      for (const file of files) {
+        const filePath = path.join(extDir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isFile()) {
+          if (file === 'config.json') {
+            // 动态写入当前真实服务器域名
+            const dynamicConfig = JSON.stringify({ serverUrl: serverOrigin }, null, 2);
+            zip.addFile('config.json', Buffer.from(dynamicConfig, 'utf8'));
+          } else {
+            const content = fs.readFileSync(filePath);
+            zip.addFile(file, content);
+          }
+        }
+      }
+    } else {
+      // 备用内嵌生成核心扩展文件
+      const manifest = {
+        manifest_version: 3,
+        name: "Total English Web Clipper",
+        version: "1.1.0",
+        description: "1-Click clip any article, LMS course, or webpage to Total English reader with AI tools.",
+        permissions: ["activeTab", "scripting", "storage"],
+        host_permissions: ["<all_urls>"],
+        action: { default_title: "Clip to Total English (Auto-expands all accordions)" },
+        options_page: "options.html",
+        background: { service_worker: "background.js" }
+      };
+      zip.addFile('manifest.json', Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'));
+      zip.addFile('config.json', Buffer.from(JSON.stringify({ serverUrl: serverOrigin }, null, 2), 'utf8'));
+    }
+
+    const zipBuffer = zip.toBuffer();
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="total-english-clipper.zip"');
+    res.setHeader('Content-Length', zipBuffer.length.toString());
+    res.send(zipBuffer);
+  } catch (err: any) {
+    console.error('Failed to generate extension zip:', err);
+    res.status(500).json({ error: 'Failed to generate extension package.' });
+  }
+});
+
+/**
  * 1. 仅解析网页 (用于前端预览或校验)
  * POST /api/webpages/parse { url }
  */
