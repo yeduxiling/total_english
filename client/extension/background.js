@@ -122,14 +122,14 @@ chrome.action.onClicked.addListener(async (tab) => {
             } catch (err) {}
           });
 
-          // 3. 查找最丰富正文区域
-          let contentEl = document.querySelector('main, article, [role="main"], #content, .course-content, .lesson-content, .content, .page-content, body');
+          // 3. 查找正文区域（优先保留完整 body 内容，绝对不误删 header 标签）
+          let contentEl = document.querySelector('main, article, [role="main"], #content, .course-content, .lesson-content, .content, .page-content');
           if (!contentEl) contentEl = document.body;
 
           const clone = contentEl.cloneNode(true);
 
-          // 移除脚本、样式、无用导航
-          clone.querySelectorAll('script, style, noscript, nav, header, footer, .sidebar, #sidebar, .header-nav').forEach(function (el) {
+          // 仅精准移除真正的脚本与全局站点导航，绝对保留正文中的 header、title 与 section！
+          clone.querySelectorAll('script, style, noscript, nav, .site-header, #site-header, .global-nav, .top-bar, .site-footer, #site-footer').forEach(function (el) {
             el.remove();
           });
 
@@ -143,13 +143,20 @@ chrome.action.onClicked.addListener(async (tab) => {
             }
           });
 
-          const textLen = (clone.textContent || '').trim().length;
+          // 提取文本长度与特征评分
+          const textContent = (clone.textContent || '').trim();
+          const textLen = textContent.length;
+          
+          // 如果 URL 或内容包含课程/Lesson 特征，增加识别权重
+          const isLessonFrame = /view\/wp|content\/wp|scorm|lesson/i.test(window.location.href) ||
+                                (clone.querySelector('h1, h2, h3, p') !== null && textLen > 50);
 
           return {
             title: document.title || 'Clipped Page',
             url: window.location.href,
             contentHtml: clone.innerHTML,
             textLen: textLen,
+            isLessonFrame: isLessonFrame,
             siteName: window.location.hostname.replace(/^www\./, ''),
             count: count,
           };
@@ -164,11 +171,26 @@ chrome.action.onClicked.addListener(async (tab) => {
       return;
     }
 
-    // 在所有 frame 中找出正文字数最丰富的 frame
+    // 智能筛选出最匹配的课件 frame
     let bestResult = null;
+    
+    // 优先寻找明确的课件 frame
     for (const r of results) {
-      if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) {
-        bestResult = r.result;
+      if (r && r.result && !r.result.error) {
+        if (r.result.isLessonFrame && (r.result.textLen || 0) > 40) {
+          if (!bestResult || (r.result.textLen || 0) > (bestResult.textLen || 0)) {
+            bestResult = r.result;
+          }
+        }
+      }
+    }
+
+    // 兜底：寻找字数最多的 frame
+    if (!bestResult) {
+      for (const r of results) {
+        if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) {
+          bestResult = r.result;
+        }
       }
     }
 

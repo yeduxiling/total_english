@@ -253,21 +253,35 @@ chrome.action.onClicked.addListener(async (tab) => {
               el.style.display = 'block'; el.style.height = 'auto'; el.style.maxHeight = 'none'; el.style.opacity = '1'; el.style.visibility = 'visible'; count++;
             } catch(err) {}
           });
-          let contentEl = document.querySelector('main, article, [role="main"], #content, .course-content, .lesson-content, .content, .page-content, body');
+          let contentEl = document.querySelector('main, article, [role="main"], #content, .course-content, .lesson-content, .content, .page-content');
           if (!contentEl) contentEl = document.body;
           const clone = contentEl.cloneNode(true);
-          clone.querySelectorAll('script, style, noscript, nav, header, footer, .sidebar, #sidebar, .header-nav').forEach(function(el) { el.remove(); });
+          clone.querySelectorAll('script, style, noscript, nav, .site-header, #site-header, .global-nav, .top-bar, .site-footer, #site-footer').forEach(function(el) { el.remove(); });
           clone.querySelectorAll('img').forEach(function(img) {
             const src = img.getAttribute('src');
             if (src && !src.startsWith('data:')) { try { img.src = new URL(src, window.location.href).href; } catch(err) {} }
           });
-          return { title: document.title || 'Clipped Page', url: window.location.href, contentHtml: clone.innerHTML, textLen: (clone.textContent || '').trim().length, siteName: window.location.hostname.replace(/^www\\./, ''), count: count };
+          const textContent = (clone.textContent || '').trim();
+          const textLen = textContent.length;
+          const isLessonFrame = /view\\/wp|content\\/wp|scorm|lesson/i.test(window.location.href) || (clone.querySelector('h1, h2, h3, p') !== null && textLen > 50);
+          return { title: document.title || 'Clipped Page', url: window.location.href, contentHtml: clone.innerHTML, textLen: textLen, isLessonFrame: isLessonFrame, siteName: window.location.hostname.replace(/^www\\./, ''), count: count };
         } catch(e) { return { error: e.message }; }
       },
     });
     if (!results || results.length === 0) { showPageToast(tab.id, '❌ No frame content found on this page.', 'error'); return; }
     let bestResult = null;
-    for (const r of results) { if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) bestResult = r.result; }
+    for (const r of results) {
+      if (r && r.result && !r.result.error) {
+        if (r.result.isLessonFrame && (r.result.textLen || 0) > 40) {
+          if (!bestResult || (r.result.textLen || 0) > (bestResult.textLen || 0)) bestResult = r.result;
+        }
+      }
+    }
+    if (!bestResult) {
+      for (const r of results) {
+        if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) bestResult = r.result;
+      }
+    }
     if (!bestResult || !bestResult.contentHtml || bestResult.textLen < 20) { showPageToast(tab.id, '⚠️ Content is empty or too short to clip.', 'error'); return; }
     const clipApiUrl = serverUrl + '/api/webpages/clip';
     const response = await fetch(clipApiUrl, {
