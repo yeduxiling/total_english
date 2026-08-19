@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Total English Web Clipper",
+  "version": "1.1.0",
+  "description": "1-Click clip any article, LMS course, or webpage to Total English reader with AI tools.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Clip to Total English (Auto-expands all accordions)"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  }
+}

@@ -77,7 +77,6 @@ webpagesRouter.get('/extension/download', async (req: Request, res: Response): P
     const forwardedHost = (req.headers['x-forwarded-host'] as string) || '';
     const host = forwardedHost.split(',')[0].trim() || req.get('host') || 'localhost:5173';
     
-    // 如果是开发环境端口 3001，前端对应端口为 5173
     let serverOrigin = `${protocol}://${host}`;
     if (host === 'localhost:3001' || host === '127.0.0.1:3001') {
       serverOrigin = 'http://localhost:5173';
@@ -85,13 +84,14 @@ webpagesRouter.get('/extension/download', async (req: Request, res: Response): P
 
     const zip = new AdmZip();
 
-    // 确定 extension 源码目录位置
-    // 在开发环境或容器环境中查找 client/extension 目录
+    // 查找源码目录
     const possibleDirs = [
+      path.resolve(process.cwd(), 'src/extension'),
+      path.resolve(process.cwd(), 'dist/extension'),
       path.resolve(process.cwd(), '../client/extension'),
       path.resolve(process.cwd(), 'client/extension'),
+      path.resolve('/app/src/extension'),
       path.resolve('/app/client/extension'),
-      path.resolve(process.cwd(), 'dist/extension'),
     ];
 
     let extDir = possibleDirs.find(d => fs.existsSync(d));
@@ -103,7 +103,6 @@ webpagesRouter.get('/extension/download', async (req: Request, res: Response): P
         const stat = fs.statSync(filePath);
         if (stat.isFile()) {
           if (file === 'config.json') {
-            // 动态写入当前真实服务器域名
             const dynamicConfig = JSON.stringify({ serverUrl: serverOrigin }, null, 2);
             zip.addFile('config.json', Buffer.from(dynamicConfig, 'utf8'));
           } else {
@@ -112,8 +111,12 @@ webpagesRouter.get('/extension/download', async (req: Request, res: Response): P
           }
         }
       }
-    } else {
-      // 备用内嵌生成核心扩展文件
+    }
+
+    // 关键双保险：如果 zip 中缺少必要文件，注入完整生产代码！
+    const entries = zip.getEntries().map(e => e.entryName);
+
+    if (!entries.includes('manifest.json')) {
       const manifest = {
         manifest_version: 3,
         name: "Total English Web Clipper",
@@ -126,7 +129,165 @@ webpagesRouter.get('/extension/download', async (req: Request, res: Response): P
         background: { service_worker: "background.js" }
       };
       zip.addFile('manifest.json', Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'));
+    }
+
+    if (!entries.includes('config.json')) {
       zip.addFile('config.json', Buffer.from(JSON.stringify({ serverUrl: serverOrigin }, null, 2), 'utf8'));
+    }
+
+    if (!entries.includes('options.html')) {
+      const optionsHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Total English Clipper Settings</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #18181b; color: #f4f4f5; padding: 32px; max-width: 480px; margin: 0 auto; }
+    h2 { font-size: 20px; margin-top: 0; color: #ffffff; display: flex; align-items: center; gap: 8px; }
+    p { font-size: 13.5px; color: #a1a1aa; line-height: 1.5; }
+    .form-group { margin: 24px 0; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #e4e4e7; }
+    input { width: 100%; box-sizing: border-box; padding: 10px 14px; background: #27272a; border: 1px solid #3f3f46; border-radius: 6px; color: #ffffff; font-size: 14px; outline: none; }
+    input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+    .btn-row { display: flex; gap: 12px; }
+    button { padding: 10px 20px; border-radius: 6px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; background: #6366f1; color: #ffffff; }
+    button:hover { background: #4f46e5; }
+    .status-msg { margin-top: 16px; font-size: 13px; padding: 8px 12px; border-radius: 6px; display: none; }
+    .status-success { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.25); }
+    .status-error { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+  </style>
+</head>
+<body>
+  <h2><span>⚙️</span> Total English Clipper Settings</h2>
+  <p>Configure the server address where clipped articles will be saved and opened.</p>
+  <div class="form-group">
+    <label for="serverUrl">Total English Server URL</label>
+    <input type="url" id="serverUrl" placeholder="https://your-domain.com" required>
+  </div>
+  <div class="btn-row"><button id="saveBtn">Save & Test Connection</button></div>
+  <div id="statusMsg" class="status-msg"></div>
+  <script src="options.js"></script>
+</body>
+</html>`;
+      zip.addFile('options.html', Buffer.from(optionsHtml, 'utf8'));
+    }
+
+    if (!entries.includes('options.js')) {
+      const optionsJs = `const input = document.getElementById('serverUrl');
+const saveBtn = document.getElementById('saveBtn');
+const statusMsg = document.getElementById('statusMsg');
+function showStatus(text, isError) { statusMsg.textContent = text; statusMsg.className = 'status-msg ' + (isError ? 'status-error' : 'status-success'); statusMsg.style.display = 'block'; }
+async function loadConfig() {
+  const stored = await chrome.storage.local.get(['serverUrl']);
+  if (stored.serverUrl) { input.value = stored.serverUrl; return; }
+  try { const res = await fetch(chrome.runtime.getURL('config.json')); const json = await res.json(); if (json.serverUrl) input.value = json.serverUrl; } catch {}
+}
+saveBtn.addEventListener('click', async () => {
+  let url = (input.value || '').trim().replace(/\\/+$/, '');
+  if (!url) { showStatus('Please enter a valid server URL.', true); return; }
+  saveBtn.disabled = true; saveBtn.textContent = 'Testing connection...';
+  try {
+    const testRes = await fetch(url + '/api/health');
+    if (testRes.ok) { await chrome.storage.local.set({ serverUrl: url }); showStatus('✅ Connected & saved successfully!', false); }
+    else { await chrome.storage.local.set({ serverUrl: url }); showStatus('⚠️ Saved, but server returned HTTP ' + testRes.status, true); }
+  } catch (err) { await chrome.storage.local.set({ serverUrl: url }); showStatus('⚠️ Saved, but failed to connect (' + err.message + ').', true); }
+  finally { saveBtn.disabled = false; saveBtn.textContent = 'Save & Test Connection'; }
+});
+loadConfig();`;
+      zip.addFile('options.js', Buffer.from(optionsJs, 'utf8'));
+    }
+
+    if (!entries.includes('background.js')) {
+      const backgroundJs = `async function getServerUrl() {
+  const stored = await chrome.storage.local.get(['serverUrl']);
+  if (stored.serverUrl && stored.serverUrl.trim()) return stored.serverUrl.trim().replace(/\\/+$/, '');
+  try { const res = await fetch(chrome.runtime.getURL('config.json')); const json = await res.json(); if (json.serverUrl && json.serverUrl.trim()) return json.serverUrl.trim().replace(/\\/+$/, ''); } catch {}
+  return 'http://localhost:5173';
+}
+function showPageToast(tabId, message, type) {
+  chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    func: (msg, toastType) => {
+      const existing = document.getElementById('total-english-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.id = 'total-english-toast';
+      toast.style.position = 'fixed'; toast.style.top = '24px'; toast.style.right = '24px'; toast.style.zIndex = '99999999';
+      toast.style.padding = '14px 20px'; toast.style.borderRadius = '10px'; toast.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      toast.style.fontSize = '14px'; toast.style.fontWeight = '600'; toast.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.5)';
+      toast.style.transition = 'all 0.3s ease'; toast.style.display = 'flex'; toast.style.alignItems = 'center'; toast.style.gap = '10px';
+      if (toastType === 'success') { toast.style.background = '#10b981'; toast.style.color = '#ffffff'; }
+      else if (toastType === 'error') { toast.style.background = '#ef4444'; toast.style.color = '#ffffff'; }
+      else { toast.style.background = '#6366f1'; toast.style.color = '#ffffff'; }
+      toast.textContent = msg; document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(-10px)'; setTimeout(() => toast.remove(), 400); }, toastType === 'error' ? 6000 : 3000);
+    },
+    args: [message, type],
+  }).catch(() => {});
+}
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab || !tab.id) return;
+  const serverUrl = await getServerUrl();
+  showPageToast(tab.id, '⏳ Expanding accordions & clipping content...', 'info');
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id, allFrames: true },
+      func: async () => {
+        try {
+          const clickables = document.querySelectorAll('[aria-expanded="false"], [data-state="closed"], .accordion-header, .accordion-button, .accordion-toggle, .accordion__trigger, .accordion-title, summary, [role="button"][aria-expanded="false"], .collapsible-header, .panel-heading');
+          clickables.forEach(function(el) { try { if (typeof el.click === 'function') el.click(); } catch(err) {} });
+          document.querySelectorAll('.accordion, .collapsible, [data-accordion]').forEach(function(acc) {
+            const header = acc.querySelector('button, header, h2, h3, h4, .title, [class*="header"], [class*="title"], [class*="toggle"]');
+            if (header && typeof header.click === 'function') { try { header.click(); } catch(err) {} }
+          });
+          await new Promise(function(resolve) { setTimeout(resolve, 350); });
+          let count = 0;
+          document.querySelectorAll('details').forEach(function(d) { d.setAttribute('open', 'true'); count++; });
+          const hiddenPanels = document.querySelectorAll('[aria-expanded="false"], [data-state="closed"], .collapsed, .collapse:not(.show), [hidden], .accordion-content, .accordion-body, .panel-collapse, [data-accordion-content], [class*="accordion_body"], [class*="accordion__body"], [class*="accordion-body"], [class*="accordion-content"]');
+          hiddenPanels.forEach(function(el) {
+            try {
+              el.removeAttribute('hidden'); el.setAttribute('aria-expanded', 'true');
+              if (el.hasAttribute('data-state')) el.setAttribute('data-state', 'open');
+              if (el.classList.contains('collapsed')) el.classList.remove('collapsed');
+              if (el.classList.contains('collapse') && !el.classList.contains('show')) el.classList.add('show');
+              el.style.display = 'block'; el.style.height = 'auto'; el.style.maxHeight = 'none'; el.style.opacity = '1'; el.style.visibility = 'visible'; count++;
+            } catch(err) {}
+          });
+          let contentEl = document.querySelector('main, article, [role="main"], #content, .course-content, .lesson-content, .content, .page-content, body');
+          if (!contentEl) contentEl = document.body;
+          const clone = contentEl.cloneNode(true);
+          clone.querySelectorAll('script, style, noscript, nav, header, footer, .sidebar, #sidebar, .header-nav').forEach(function(el) { el.remove(); });
+          clone.querySelectorAll('img').forEach(function(img) {
+            const src = img.getAttribute('src');
+            if (src && !src.startsWith('data:')) { try { img.src = new URL(src, window.location.href).href; } catch(err) {} }
+          });
+          return { title: document.title || 'Clipped Page', url: window.location.href, contentHtml: clone.innerHTML, textLen: (clone.textContent || '').trim().length, siteName: window.location.hostname.replace(/^www\\./, ''), count: count };
+        } catch(e) { return { error: e.message }; }
+      },
+    });
+    if (!results || results.length === 0) { showPageToast(tab.id, '❌ No frame content found on this page.', 'error'); return; }
+    let bestResult = null;
+    for (const r of results) { if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) bestResult = r.result; }
+    if (!bestResult || !bestResult.contentHtml || bestResult.textLen < 20) { showPageToast(tab.id, '⚠️ Content is empty or too short to clip.', 'error'); return; }
+    const clipApiUrl = serverUrl + '/api/webpages/clip';
+    const response = await fetch(clipApiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: bestResult.title, url: bestResult.url, contentHtml: bestResult.contentHtml, siteName: bestResult.siteName }),
+    });
+    if (!response.ok) throw new Error('Server returned HTTP ' + response.status + ' (' + clipApiUrl + ')');
+    const created = await response.json();
+    if (created && created.id) {
+      showPageToast(tab.id, '🎉 Clipped successfully! Opening reader...', 'success');
+      chrome.tabs.create({ url: serverUrl + '/reading/web/read/' + created.id });
+    }
+  } catch(err) {
+    console.error('Total English Clipper Error:', err);
+    showPageToast(tab.id, '❌ Failed to connect to ' + serverUrl + ': ' + err.message, 'error');
+    chrome.runtime.openOptionsPage();
+  }
+});`;
+      zip.addFile('background.js', Buffer.from(backgroundJs, 'utf8'));
     }
 
     const zipBuffer = zip.toBuffer();
