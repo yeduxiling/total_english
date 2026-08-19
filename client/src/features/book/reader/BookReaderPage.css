@@ -257,6 +257,7 @@
 }
 
 /* ===== EPUB.js 划线高亮宿主 SVG 全局渲染系统 (严禁遮挡正文选区) ===== */
+/* ===== EPUB.js 划线高亮宿主 SVG 全局渲染系统 (与 Pages 模式像素级完全一致) ===== */
 .reader-viewport svg {
   pointer-events: none !important;
   cursor: default !important;
@@ -272,32 +273,33 @@
   mix-blend-mode: normal !important;
 }
 
-/* 仅在具体的高亮矩形 rect 和下划线 line 上启用手型与鼠标事件 */
+/* 背景矩形：鲜亮通透圆角底色，四周绝无任何封闭方框 */
 .reader-viewport svg rect,
 g.reader-highlight rect,
 g.epubjs-hl rect {
-  rx: 3px !important;
-  ry: 3px !important;
+  rx: 4px !important;
+  ry: 4px !important;
   pointer-events: auto !important;
   cursor: pointer !important;
   stroke: none !important;
   stroke-width: 0 !important;
 }
 
+/* 底部下划线：3px 鲜明饱满实体彩色横线 */
 .reader-viewport svg line,
 g.reader-highlight line,
 g.epubjs-hl line {
   pointer-events: auto !important;
   cursor: pointer !important;
-  stroke-width: 2.5px !important;
+  stroke-width: 3px !important;
   stroke-linecap: round !important;
 }
 
-/* 5 种主题色 (通透底色 + 纯底部实体下划线，四周绝无任何封闭方框) */
+/* 5 种主题色 (鲜亮底色 + 3px 纯底部实体下划线) */
 .reader-viewport g.hl-yellow rect,
 .reader-viewport g[class*="hl-yellow"] rect,
 .reader-viewport g[data-color="yellow"] rect {
-  fill: rgba(250, 204, 21, 0.22) !important;
+  fill: rgba(250, 204, 21, 0.28) !important;
 }
 .reader-viewport g.hl-yellow line,
 .reader-viewport g[class*="hl-yellow"] line,
@@ -308,7 +310,7 @@ g.epubjs-hl line {
 .reader-viewport g.hl-green rect,
 .reader-viewport g[class*="hl-green"] rect,
 .reader-viewport g[data-color="green"] rect {
-  fill: rgba(74, 222, 128, 0.22) !important;
+  fill: rgba(74, 222, 128, 0.28) !important;
 }
 .reader-viewport g.hl-green line,
 .reader-viewport g[class*="hl-green"] line,
@@ -319,7 +321,7 @@ g.epubjs-hl line {
 .reader-viewport g.hl-blue rect,
 .reader-viewport g[class*="hl-blue"] rect,
 .reader-viewport g[data-color="blue"] rect {
-  fill: rgba(96, 165, 250, 0.22) !important;
+  fill: rgba(96, 165, 250, 0.28) !important;
 }
 .reader-viewport g.hl-blue line,
 .reader-viewport g[class*="hl-blue"] line,
@@ -330,7 +332,7 @@ g.epubjs-hl line {
 .reader-viewport g.hl-pink rect,
 .reader-viewport g[class*="hl-pink"] rect,
 .reader-viewport g[data-color="pink"] rect {
-  fill: rgba(244, 114, 182, 0.22) !important;
+  fill: rgba(244, 114, 182, 0.28) !important;
 }
 .reader-viewport g.hl-pink line,
 .reader-viewport g[class*="hl-pink"] line,
@@ -341,7 +343,7 @@ g.epubjs-hl line {
 .reader-viewport g.hl-purple rect,
 .reader-viewport g[class*="hl-purple"] rect,
 .reader-viewport g[data-color="purple"] rect {
-  fill: rgba(192, 132, 252, 0.22) !important;
+  fill: rgba(192, 132, 252, 0.28) !important;
 }
 .reader-viewport g.hl-purple line,
 .reader-viewport g[class*="hl-purple"] line,

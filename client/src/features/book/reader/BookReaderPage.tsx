@@ -241,9 +241,9 @@ export default function BookReaderPage() {
         'reader-highlight',
         {
           fill: colorHex,
-          'fill-opacity': '0.22',
+          'fill-opacity': '0.28',
           stroke: colorHex,
-          'stroke-width': '2.5px',
+          'stroke-width': '3px',
         }
       );
     } catch (err) {
