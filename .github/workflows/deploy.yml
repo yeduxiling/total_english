@@ -5,6 +5,11 @@ on:
     branches:
       - main  # 监听 main 分支的 push 事件
 
+# 自动合并并发构建，避免频繁提交导致的队列排队阻塞
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
 jobs:
   # ==========================================
   # 阶段 1: CI 自动化构建校验 (代码防崩门禁)
