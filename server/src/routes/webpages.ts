@@ -228,12 +228,19 @@ function showPageToast(tabId, message, type) {
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab || !tab.id) return;
   const serverUrl = await getServerUrl();
-  showPageToast(tab.id, '⏳ Expanding accordions & clipping content...', 'info');
+  showPageToast(tab.id, '⏳ Expanding accordions & extracting full content...', 'info');
   try {
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id, allFrames: true },
       func: async () => {
         try {
+          const selection = window.getSelection();
+          let selectedHtml = '';
+          if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
+            const container = document.createElement('div');
+            for (let i = 0; i < selection.rangeCount; i++) container.appendChild(selection.getRangeAt(i).cloneContents());
+            selectedHtml = container.innerHTML.trim();
+          }
           const clickables = document.querySelectorAll('[aria-expanded="false"], [data-state="closed"], .accordion-header, .accordion-button, .accordion-toggle, .accordion__trigger, .accordion-title, summary, [role="button"][aria-expanded="false"], .collapsible-header, .panel-heading');
           clickables.forEach(function(el) { try { if (typeof el.click === 'function') el.click(); } catch(err) {} });
           document.querySelectorAll('.accordion, .collapsible, [data-accordion]').forEach(function(acc) {
@@ -253,18 +260,24 @@ chrome.action.onClicked.addListener(async (tab) => {
               el.style.display = 'block'; el.style.height = 'auto'; el.style.maxHeight = 'none'; el.style.opacity = '1'; el.style.visibility = 'visible'; count++;
             } catch(err) {}
           });
-          let contentEl = document.querySelector('main, article, [role="main"], #content, .course-content, .lesson-content, .content, .page-content');
-          if (!contentEl) contentEl = document.body;
-          const clone = contentEl.cloneNode(true);
-          clone.querySelectorAll('script, style, noscript, nav, .site-header, #site-header, .global-nav, .top-bar, .site-footer, #site-footer').forEach(function(el) { el.remove(); });
-          clone.querySelectorAll('img').forEach(function(img) {
+          const bodyClone = document.body ? document.body.cloneNode(true) : document.createElement('div');
+          bodyClone.querySelectorAll('script, style, noscript, nav, .site-header, #site-header, .global-nav, .top-bar, .site-footer, #site-footer').forEach(function(el) { el.remove(); });
+          bodyClone.querySelectorAll('img').forEach(function(img) {
             const src = img.getAttribute('src');
             if (src && !src.startsWith('data:')) { try { img.src = new URL(src, window.location.href).href; } catch(err) {} }
           });
-          const textContent = (clone.textContent || '').trim();
-          const textLen = textContent.length;
-          const isLessonFrame = /view\\/wp|content\\/wp|scorm|lesson/i.test(window.location.href) || (clone.querySelector('h1, h2, h3, p') !== null && textLen > 50);
-          return { title: document.title || 'Clipped Page', url: window.location.href, contentHtml: clone.innerHTML, textLen: textLen, isLessonFrame: isLessonFrame, siteName: window.location.hostname.replace(/^www\\./, ''), count: count };
+          const pElements = bodyClone.querySelectorAll('p, blockquote, li, pre');
+          let paragraphTextLen = 0;
+          pElements.forEach(p => { paragraphTextLen += (p.textContent || '').trim().length; });
+          const totalText = (bodyClone.textContent || '').trim();
+          const totalTextLen = totalText.length;
+          const pCount = pElements.length;
+          const qualityScore = (selectedHtml ? 100000 : 0) + (paragraphTextLen * 2) + (pCount * 50) + totalTextLen;
+          let pageTitle = '';
+          const h1 = bodyClone.querySelector('h1, h2, h3, .title');
+          if (h1 && (h1.textContent || '').trim().length > 3) pageTitle = (h1.textContent || '').trim();
+          else pageTitle = document.title || 'Clipped Article';
+          return { title: pageTitle, url: window.location.href, contentHtml: selectedHtml || bodyClone.innerHTML, totalTextLen: totalTextLen, paragraphTextLen: paragraphTextLen, pCount: pCount, qualityScore: qualityScore, hasSelection: !!selectedHtml, siteName: window.location.hostname.replace(/^www\\./, ''), count: count };
         } catch(e) { return { error: e.message }; }
       },
     });
@@ -272,17 +285,10 @@ chrome.action.onClicked.addListener(async (tab) => {
     let bestResult = null;
     for (const r of results) {
       if (r && r.result && !r.result.error) {
-        if (r.result.isLessonFrame && (r.result.textLen || 0) > 40) {
-          if (!bestResult || (r.result.textLen || 0) > (bestResult.textLen || 0)) bestResult = r.result;
-        }
+        if (!bestResult || (r.result.qualityScore || 0) > (bestResult.qualityScore || 0)) bestResult = r.result;
       }
     }
-    if (!bestResult) {
-      for (const r of results) {
-        if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) bestResult = r.result;
-      }
-    }
-    if (!bestResult || !bestResult.contentHtml || bestResult.textLen < 20) { showPageToast(tab.id, '⚠️ Content is empty or too short to clip.', 'error'); return; }
+    if (!bestResult || !bestResult.contentHtml || (bestResult.totalTextLen < 20 && !bestResult.hasSelection)) { showPageToast(tab.id, '⚠️ Content is empty or too short to clip.', 'error'); return; }
     const clipApiUrl = serverUrl + '/api/webpages/clip';
     const response = await fetch(clipApiUrl, {
       method: 'POST',

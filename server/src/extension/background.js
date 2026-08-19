@@ -67,25 +67,33 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!tab || !tab.id) return;
 
   const serverUrl = await getServerUrl();
-  showPageToast(tab.id, '⏳ Expanding accordions & clipping content...', 'info');
+  showPageToast(tab.id, '⏳ Expanding accordions & extracting full content...', 'info');
 
   try {
-    // 注入提取脚本到当前页面的所有 frame（包括跨域 iframe）
+    // 注入提取脚本到当前页面的所有 frame（包括多层嵌套 iframe）
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id, allFrames: true },
       func: async () => {
         try {
-          // 1. 第一轮：模拟点击所有处于折叠状态的手风琴按钮与触发器（支持 React/Vue 动态挂载）
+          // 0. 优先检测当前 frame 是否有用户选中的文字
+          const selection = window.getSelection();
+          let selectedHtml = '';
+          if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
+            const container = document.createElement('div');
+            for (let i = 0; i < selection.rangeCount; i++) {
+              container.appendChild(selection.getRangeAt(i).cloneContents());
+            }
+            selectedHtml = container.innerHTML.trim();
+          }
+
+          // 1. 第一轮：模拟点击所有处于折叠状态的手风琴与展开按钮
           const clickables = document.querySelectorAll(
             '[aria-expanded="false"], [data-state="closed"], .accordion-header, .accordion-button, .accordion-toggle, .accordion__trigger, .accordion-title, summary, [role="button"][aria-expanded="false"], .collapsible-header, .panel-heading'
           );
           clickables.forEach(function (el) {
-            try {
-              if (typeof el.click === 'function') el.click();
-            } catch (err) {}
+            try { if (typeof el.click === 'function') el.click(); } catch (err) {}
           });
 
-          // 针对通过 class 或下箭头图标组织的手风琴进行深度触发
           document.querySelectorAll('.accordion, .collapsible, [data-accordion]').forEach(function (acc) {
             const header = acc.querySelector('button, header, h2, h3, h4, .title, [class*="header"], [class*="title"], [class*="toggle"]');
             if (header && typeof header.click === 'function') {
@@ -93,7 +101,7 @@ chrome.action.onClicked.addListener(async (tab) => {
             }
           });
 
-          // 等待 350ms，让 React / Vue / 动画完成 DOM 渲染挂载
+          // 等待 350ms，让 React / Vue / LMS 动画完成 DOM 渲染挂载
           await new Promise(function (resolve) { setTimeout(resolve, 350); });
 
           // 2. 第二轮：强制将所有 CSS 隐藏的手风琴面板、details、collapse 全部设为完全可见
@@ -122,19 +130,16 @@ chrome.action.onClicked.addListener(async (tab) => {
             } catch (err) {}
           });
 
-          // 3. 查找正文区域（优先保留完整 body 内容，绝对不误删 header 标签）
-          let contentEl = document.querySelector('main, article, [role="main"], #content, .course-content, .lesson-content, .content, .page-content');
-          if (!contentEl) contentEl = document.body;
+          // 3. 提取当前 frame 的主体 DOM
+          const bodyClone = document.body ? document.body.cloneNode(true) : document.createElement('div');
 
-          const clone = contentEl.cloneNode(true);
-
-          // 仅精准移除真正的脚本与全局站点导航，绝对保留正文中的 header、title 与 section！
-          clone.querySelectorAll('script, style, noscript, nav, .site-header, #site-header, .global-nav, .top-bar, .site-footer, #site-footer').forEach(function (el) {
+          // 只精准移除无用外壳，保留所有的正文容器和标题
+          bodyClone.querySelectorAll('script, style, noscript, nav, .site-header, #site-header, .global-nav, .top-bar, .site-footer, #site-footer').forEach(function (el) {
             el.remove();
           });
 
-          // 补全所有图片为绝对路径
-          clone.querySelectorAll('img').forEach(function (img) {
+          // 补全所有图片绝对路径
+          bodyClone.querySelectorAll('img').forEach(function (img) {
             const src = img.getAttribute('src');
             if (src && !src.startsWith('data:')) {
               try {
@@ -143,20 +148,39 @@ chrome.action.onClicked.addListener(async (tab) => {
             }
           });
 
-          // 提取文本长度与特征评分
-          const textContent = (clone.textContent || '').trim();
-          const textLen = textContent.length;
-          
-          // 如果 URL 或内容包含课程/Lesson 特征，增加识别权重
-          const isLessonFrame = /view\/wp|content\/wp|scorm|lesson/i.test(window.location.href) ||
-                                (clone.querySelector('h1, h2, h3, p') !== null && textLen > 50);
+          // 4. 精准打分：计算正文段落密度（Paragraphs Score）
+          // 课件正文 frame 必定包含很多实质段落 (<p>) 和长英文句子，而外壳页面全是一两个词的菜单链接
+          const pElements = bodyClone.querySelectorAll('p, blockquote, li, pre');
+          let paragraphTextLen = 0;
+          pElements.forEach(p => {
+            paragraphTextLen += (p.textContent || '').trim().length;
+          });
+
+          const totalText = (bodyClone.textContent || '').trim();
+          const totalTextLen = totalText.length;
+          const pCount = pElements.length;
+
+          // 综合评分：段落文字长度 * 2 + 段落数量 * 50 + 总字数
+          const qualityScore = (selectedHtml ? 100000 : 0) + (paragraphTextLen * 2) + (pCount * 50) + totalTextLen;
+
+          // 提取最佳页面标题
+          let pageTitle = '';
+          const h1 = bodyClone.querySelector('h1, h2, h3, .title');
+          if (h1 && (h1.textContent || '').trim().length > 3) {
+            pageTitle = (h1.textContent || '').trim();
+          } else {
+            pageTitle = document.title || 'Clipped Article';
+          }
 
           return {
-            title: document.title || 'Clipped Page',
+            title: pageTitle,
             url: window.location.href,
-            contentHtml: clone.innerHTML,
-            textLen: textLen,
-            isLessonFrame: isLessonFrame,
+            contentHtml: selectedHtml || bodyClone.innerHTML,
+            totalTextLen: totalTextLen,
+            paragraphTextLen: paragraphTextLen,
+            pCount: pCount,
+            qualityScore: qualityScore,
+            hasSelection: !!selectedHtml,
             siteName: window.location.hostname.replace(/^www\./, ''),
             count: count,
           };
@@ -171,30 +195,17 @@ chrome.action.onClicked.addListener(async (tab) => {
       return;
     }
 
-    // 智能筛选出最匹配的课件 frame
+    // 智能筛选出得分最高（正文段落最丰富、最具课件实质内容）的 frame
     let bestResult = null;
-    
-    // 优先寻找明确的课件 frame
     for (const r of results) {
       if (r && r.result && !r.result.error) {
-        if (r.result.isLessonFrame && (r.result.textLen || 0) > 40) {
-          if (!bestResult || (r.result.textLen || 0) > (bestResult.textLen || 0)) {
-            bestResult = r.result;
-          }
-        }
-      }
-    }
-
-    // 兜底：寻找字数最多的 frame
-    if (!bestResult) {
-      for (const r of results) {
-        if (r && r.result && !r.result.error && (r.result.textLen || 0) > (bestResult ? bestResult.textLen : 0)) {
+        if (!bestResult || (r.result.qualityScore || 0) > (bestResult.qualityScore || 0)) {
           bestResult = r.result;
         }
       }
     }
 
-    if (!bestResult || !bestResult.contentHtml || bestResult.textLen < 20) {
+    if (!bestResult || !bestResult.contentHtml || (bestResult.totalTextLen < 20 && !bestResult.hasSelection)) {
       showPageToast(tab.id, '⚠️ Content is empty or too short to clip.', 'error');
       return;
     }
@@ -227,7 +238,6 @@ chrome.action.onClicked.addListener(async (tab) => {
   } catch (err) {
     console.error('Total English Clipper Error:', err);
     showPageToast(tab.id, `❌ Failed to connect to ${serverUrl}: ${err.message}`, 'error');
-    // 如果连接失败，自动打开选项页面引导用户查看或修改服务器地址
     chrome.runtime.openOptionsPage();
   }
 });
