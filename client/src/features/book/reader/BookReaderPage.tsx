@@ -221,11 +221,15 @@ export default function BookReaderPage() {
     setSelectionPosition({ x: posX, y: posY, placement });
   }, []);
 
-  // 辅助函数：向 rendition 挂载高亮及点击唤起工具栏回调 (统一精致下划线与通透底色)
+  // 辅助函数：向 rendition 挂载高亮及点击唤起工具栏回调 (统一精致下划线与通透底色，显式覆盖 mix-blend-mode 为 normal 严防暗色模式下变黑隐形)
   const attachHighlightToRendition = useCallback((hl: HighlightItem) => {
     if (!renditionRef.current) return;
     const colorHex = HIGHLIGHT_COLOR_MAP[hl.color] || '#facc15';
     try {
+      try {
+        renditionRef.current.annotations.remove(hl.cfi_range, 'highlight');
+      } catch {}
+
       renditionRef.current.annotations.add(
         'highlight',
         hl.cfi_range,
@@ -236,13 +240,26 @@ export default function BookReaderPage() {
         `reader-highlight hl-${hl.color}`,
         {
           fill: colorHex,
-          'fill-opacity': '0.22',
+          'fill-opacity': '0.3',
+          'mix-blend-mode': 'normal',
           stroke: colorHex,
-          'stroke-width': '2.5px',
+          'stroke-width': '2px',
         }
       );
-    } catch {}
+    } catch (err) {
+      console.warn('Failed to attach highlight:', err);
+    }
   }, [openToolbarForHighlight]);
+
+  // 当 highlights 状态加载完毕或更新时，自动挂载到当前 rendition
+  useEffect(() => {
+    highlightsRef.current = highlights;
+    if (renditionRef.current && highlights.length > 0) {
+      highlights.forEach((hl) => {
+        attachHighlightToRendition(hl);
+      });
+    }
+  }, [highlights, attachHighlightToRendition]);
 
   // 1. 获取书籍详情与标注数据
   const fetchBookAndAnnotations = useCallback(async () => {
@@ -481,6 +498,15 @@ export default function BookReaderPage() {
           }
         }).catch(() => {});
 
+        // 视图渲染事件：每次新章节/视图挂载完成，确保所有划线立刻绘制呈现
+        rendition.on('rendered', () => {
+          if (highlightsRef.current && highlightsRef.current.length > 0) {
+            highlightsRef.current.forEach((hl) => {
+              attachHighlightToRendition(hl);
+            });
+          }
+        });
+
         // 位置变更事件 (翻页/进度上报：LocalStorage + 数据库 双重即时保存)
         rendition.on('relocated', (location: any) => {
           if (!isMounted || !location) return;
@@ -569,32 +595,34 @@ export default function BookReaderPage() {
                 cursor: pointer !important;
                 pointer-events: auto !important;
                 overflow: visible !important;
+                mix-blend-mode: normal !important;
+                opacity: 1 !important;
               }
               svg.epubjs-hl rect {
                 rx: 3px !important;
                 ry: 3px !important;
-                fill-opacity: 0.22 !important;
+                fill-opacity: 0.3 !important;
                 stroke-width: 2.5px !important;
                 paint-order: fill stroke !important;
               }
-              svg.epubjs-hl.hl-yellow rect, svg.epubjs-hl[data-color="yellow"] rect {
-                fill: rgba(250, 204, 21, 0.22) !important;
+              svg.epubjs-hl.hl-yellow rect, svg.epubjs-hl[data-color="yellow"] rect, .hl-yellow rect {
+                fill: rgba(250, 204, 21, 0.3) !important;
                 stroke: #facc15 !important;
               }
-              svg.epubjs-hl.hl-green rect, svg.epubjs-hl[data-color="green"] rect {
-                fill: rgba(74, 222, 128, 0.22) !important;
+              svg.epubjs-hl.hl-green rect, svg.epubjs-hl[data-color="green"] rect, .hl-green rect {
+                fill: rgba(74, 222, 128, 0.3) !important;
                 stroke: #4ade80 !important;
               }
-              svg.epubjs-hl.hl-blue rect, svg.epubjs-hl[data-color="blue"] rect {
-                fill: rgba(96, 165, 250, 0.22) !important;
+              svg.epubjs-hl.hl-blue rect, svg.epubjs-hl[data-color="blue"] rect, .hl-blue rect {
+                fill: rgba(96, 165, 250, 0.3) !important;
                 stroke: #60a5fa !important;
               }
-              svg.epubjs-hl.hl-pink rect, svg.epubjs-hl[data-color="pink"] rect {
-                fill: rgba(244, 114, 182, 0.22) !important;
+              svg.epubjs-hl.hl-pink rect, svg.epubjs-hl[data-color="pink"] rect, .hl-pink rect {
+                fill: rgba(244, 114, 182, 0.3) !important;
                 stroke: #f472b6 !important;
               }
-              svg.epubjs-hl.hl-purple rect, svg.epubjs-hl[data-color="purple"] rect {
-                fill: rgba(192, 132, 252, 0.22) !important;
+              svg.epubjs-hl.hl-purple rect, svg.epubjs-hl[data-color="purple"] rect, .hl-purple rect {
+                fill: rgba(192, 132, 252, 0.3) !important;
                 stroke: #c084fc !important;
               }
             `;
