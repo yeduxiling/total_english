@@ -41,6 +41,26 @@ router.post('/:id/highlights', (req: Request, res: Response) => {
 });
 
 /**
+ * PATCH /api/books/highlights/:highlightId
+ * 修改划线颜色
+ */
+router.patch('/highlights/:highlightId', (req: Request, res: Response) => {
+  const db = getDb();
+  const { color } = req.body;
+  if (!color) {
+    return res.status(400).json({ error: 'color is required' });
+  }
+
+  const result = db.prepare('UPDATE book_highlights SET color = ? WHERE id = ?').run(color, req.params.highlightId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Highlight not found' });
+  }
+
+  const highlight = db.prepare('SELECT * FROM book_highlights WHERE id = ?').get(req.params.highlightId);
+  res.json(highlight);
+});
+
+/**
  * DELETE /api/books/highlights/:highlightId
  * 删除划线
  */

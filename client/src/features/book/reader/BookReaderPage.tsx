@@ -28,13 +28,6 @@ interface BookDetails {
   total_locations: number | null;
 }
 
-const HIGHLIGHT_COLOR_MAP: Record<HighlightColor, string> = {
-  yellow: '#facc15',
-  green: '#4ade80',
-  blue: '#60a5fa',
-  pink: '#f472b6',
-};
-
 // 高精细抗锯齿矢量阅读进度饼图组件（适度放大版）
 function ReadingProgressIcon({ percentage }: { percentage: number }) {
   const pct = Math.max(0, Math.min(1, percentage || 0));
@@ -221,45 +214,52 @@ export default function BookReaderPage() {
     setSelectionPosition({ x: posX, y: posY, placement });
   }, []);
 
-  // 辅助函数：向 rendition 挂载下划线标注及点击唤起工具栏回调 (纯底部下划线 + 半透明通透底色，绝无四周封闭边框)
-  const attachHighlightToRendition = useCallback((hl: HighlightItem) => {
+  // 辅助函数：将 CFI 对应的 DOM Range 用真正的 mark 标签高亮（与 Pages 模式 100% 像素级一致）
+  const applyDomHighlight = useCallback((hl: HighlightItem) => {
     if (!renditionRef.current) return;
-    const colorHex = HIGHLIGHT_COLOR_MAP[hl.color] || '#facc15';
     try {
-      try {
-        renditionRef.current.annotations.remove(hl.cfi_range, 'highlight');
-        renditionRef.current.annotations.remove(hl.cfi_range, 'underline');
-      } catch {}
+      const range = renditionRef.current.getRange(hl.cfi_range);
+      if (!range) return;
 
-      renditionRef.current.annotations.add(
-        'underline',
-        hl.cfi_range,
-        { id: hl.id, color: hl.color },
-        (e: MouseEvent) => {
-          openToolbarForHighlight(hl, e);
-        },
-        'reader-highlight',
-        {
-          fill: colorHex,
-          'fill-opacity': '0.28',
-          stroke: colorHex,
-          'stroke-width': '3px',
-        }
-      );
+      const doc = range.startContainer?.ownerDocument || range.commonAncestorContainer?.ownerDocument;
+      if (!doc) return;
+
+      // 若已存在对应的 mark 标签，更新颜色类名即可
+      const existingMark = doc.querySelector(`mark[data-highlight-id="${hl.id}"]`);
+      if (existingMark) {
+        existingMark.className = `web-reader-hl hl-${hl.color}`;
+        return;
+      }
+
+      const mark = doc.createElement('mark');
+      mark.className = `web-reader-hl hl-${hl.color}`;
+      mark.dataset.highlightId = hl.id;
+      mark.addEventListener('click', (e) => {
+        openToolbarForHighlight(hl, e);
+      });
+
+      try {
+        range.surroundContents(mark);
+      } catch {
+        // 跨节点安全提取
+        const fragment = range.extractContents();
+        mark.appendChild(fragment);
+        range.insertNode(mark);
+      }
     } catch (err) {
-      console.warn('Failed to attach highlight:', err);
+      console.warn('Failed to apply DOM highlight:', err);
     }
   }, [openToolbarForHighlight]);
 
-  // 当 highlights 状态加载完毕或更新时，自动挂载到当前 rendition
+  // 当 highlights 状态加载完毕或更新时，自动挂载到当前 rendition 的 DOM 中
   useEffect(() => {
     highlightsRef.current = highlights;
     if (renditionRef.current && highlights.length > 0) {
       highlights.forEach((hl) => {
-        attachHighlightToRendition(hl);
+        applyDomHighlight(hl);
       });
     }
-  }, [highlights, attachHighlightToRendition]);
+  }, [highlights, applyDomHighlight]);
 
   // 1. 获取书籍详情与标注数据
   const fetchBookAndAnnotations = useCallback(async () => {
@@ -498,11 +498,11 @@ export default function BookReaderPage() {
           }
         }).catch(() => {});
 
-        // 视图渲染事件：每次新章节/视图挂载完成，确保所有划线立刻绘制呈现
+        // 视图渲染事件：每次新章节/视图挂载完成，确保所有划线立刻以 DOM mark 形式完美呈现
         rendition.on('rendered', () => {
           if (highlightsRef.current && highlightsRef.current.length > 0) {
             highlightsRef.current.forEach((hl) => {
-              attachHighlightToRendition(hl);
+              applyDomHighlight(hl);
             });
           }
         });
@@ -512,6 +512,13 @@ export default function BookReaderPage() {
           if (!isMounted || !location) return;
           setSelectionPosition(null);
           setActiveHighlightId(null);
+
+          // 重新同步挂载当前可见页面的 DOM 高亮
+          if (highlightsRef.current && highlightsRef.current.length > 0) {
+            highlightsRef.current.forEach((hl) => {
+              applyDomHighlight(hl);
+            });
+          }
 
           let startCfi = location.start?.cfi;
           if (!startCfi && (rendition as any).currentLocation) {
@@ -583,47 +590,47 @@ export default function BookReaderPage() {
         rendition.hooks.content.register((contents: any) => {
           if (!contents || !contents.document) return;
 
-          // 1. 动态向 iframe head 注入精致下划线、通透高亮与手型样式
+          // 1. 动态向 iframe head 注入与 Pages 模式 100% 完全相同的划线高亮样式
           try {
             const styleEl = contents.document.createElement('style');
             styleEl.setAttribute('id', 'epubjs-highlight-cursor-fix');
             styleEl.textContent = `
-              .reader-highlight,
-              .epubjs-hl,
-              svg.epubjs-hl,
-              svg.epubjs-hl * {
+              .web-reader-hl,
+              mark.web-reader-hl {
                 cursor: pointer !important;
-                pointer-events: auto !important;
-                overflow: visible !important;
-                mix-blend-mode: normal !important;
-                opacity: 1 !important;
+                border-radius: 3px !important;
+                padding: 1px 3px !important;
+                margin: 0 -1px !important;
+                transition: filter 0.15s ease, background-color 0.15s ease !important;
+                color: #ffffff !important;
+                font-weight: 500 !important;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85) !important;
+                display: inline !important;
               }
-              svg.epubjs-hl rect {
-                rx: 3px !important;
-                ry: 3px !important;
-                fill-opacity: 0.3 !important;
-                stroke-width: 2.5px !important;
-                paint-order: fill stroke !important;
+              .web-reader-hl:hover,
+              mark.web-reader-hl:hover {
+                filter: brightness(1.2) !important;
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.2) !important;
               }
-              svg.epubjs-hl.hl-yellow rect, svg.epubjs-hl[data-color="yellow"] rect, .hl-yellow rect {
-                fill: rgba(250, 204, 21, 0.3) !important;
-                stroke: #facc15 !important;
+              .web-reader-hl.hl-yellow, mark.web-reader-hl.hl-yellow {
+                background-color: rgba(250, 204, 21, 0.22) !important;
+                border-bottom: 2.5px solid #facc15 !important;
               }
-              svg.epubjs-hl.hl-green rect, svg.epubjs-hl[data-color="green"] rect, .hl-green rect {
-                fill: rgba(74, 222, 128, 0.3) !important;
-                stroke: #4ade80 !important;
+              .web-reader-hl.hl-green, mark.web-reader-hl.hl-green {
+                background-color: rgba(74, 222, 128, 0.22) !important;
+                border-bottom: 2.5px solid #4ade80 !important;
               }
-              svg.epubjs-hl.hl-blue rect, svg.epubjs-hl[data-color="blue"] rect, .hl-blue rect {
-                fill: rgba(96, 165, 250, 0.3) !important;
-                stroke: #60a5fa !important;
+              .web-reader-hl.hl-blue, mark.web-reader-hl.hl-blue {
+                background-color: rgba(96, 165, 250, 0.22) !important;
+                border-bottom: 2.5px solid #60a5fa !important;
               }
-              svg.epubjs-hl.hl-pink rect, svg.epubjs-hl[data-color="pink"] rect, .hl-pink rect {
-                fill: rgba(244, 114, 182, 0.3) !important;
-                stroke: #f472b6 !important;
+              .web-reader-hl.hl-pink, mark.web-reader-hl.hl-pink {
+                background-color: rgba(244, 114, 182, 0.22) !important;
+                border-bottom: 2.5px solid #f472b6 !important;
               }
-              svg.epubjs-hl.hl-purple rect, svg.epubjs-hl[data-color="purple"] rect, .hl-purple rect {
-                fill: rgba(192, 132, 252, 0.3) !important;
-                stroke: #c084fc !important;
+              .web-reader-hl.hl-purple, mark.web-reader-hl.hl-purple {
+                background-color: rgba(192, 132, 252, 0.22) !important;
+                border-bottom: 2.5px solid #c084fc !important;
               }
             `;
             contents.document.head?.appendChild(styleEl);
@@ -774,7 +781,7 @@ export default function BookReaderPage() {
 
         // 划线回显并绑定再次点击事件
         highlights.forEach((hl) => {
-          attachHighlightToRendition(hl);
+          applyDomHighlight(hl);
         });
 
       } catch (e: any) {
@@ -897,25 +904,61 @@ export default function BookReaderPage() {
       });
 
       setHighlights(prev => [newHl, ...prev]);
-      // 页面即时高亮并绑定点击回调
-      attachHighlightToRendition(newHl);
+      // 页面即时以 DOM mark 形式高亮并绑定点击回调
+      applyDomHighlight(newHl);
+      setSelectionPosition(null);
     } catch (e) {
       console.error('Failed to create highlight:', e);
     }
   };
 
+  // 修改划线颜色
+  const handleUpdateHighlightColor = async (color: HighlightColor) => {
+    if (!activeHighlightId) return;
+    try {
+      await safeFetchJson<HighlightItem>(`/api/books/highlights/${activeHighlightId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ color }),
+      });
+      setHighlights(prev => prev.map(h => h.id === activeHighlightId ? { ...h, color } : h));
+
+      // 即时更新 DOM mark 样式
+      const iframes = viewerRef.current?.querySelectorAll('iframe') || [];
+      iframes.forEach((ifr) => {
+        const doc = ifr.contentDocument;
+        if (!doc) return;
+        const mark = doc.querySelector(`mark[data-highlight-id="${activeHighlightId}"]`);
+        if (mark) {
+          mark.className = `web-reader-hl hl-${color}`;
+        }
+      });
+      setSelectionPosition(null);
+    } catch (e) {
+      console.error('Failed to update highlight color:', e);
+    }
+  };
+
   // 删除划线
   const handleDeleteHighlight = async (highlightId: string) => {
-    const hl = highlights.find(h => h.id === highlightId);
     try {
       await safeFetchJson(`/api/books/highlights/${highlightId}`, { method: 'DELETE' });
       setHighlights(prev => prev.filter(h => h.id !== highlightId));
-      if (hl && renditionRef.current) {
-        try {
-          renditionRef.current.annotations.remove(hl.cfi_range, 'highlight');
-          renditionRef.current.annotations.remove(hl.cfi_range, 'underline');
-        } catch {}
-      }
+
+      // 从 DOM 中还原文本并移除 mark 标签
+      const iframes = viewerRef.current?.querySelectorAll('iframe') || [];
+      iframes.forEach((ifr) => {
+        const doc = ifr.contentDocument;
+        if (!doc) return;
+        const mark = doc.querySelector(`mark[data-highlight-id="${highlightId}"]`);
+        if (mark && mark.parentNode) {
+          while (mark.firstChild) {
+            mark.parentNode.insertBefore(mark.firstChild, mark);
+          }
+          mark.parentNode.removeChild(mark);
+        }
+      });
+      setSelectionPosition(null);
     } catch (e) {
       console.error('Failed to delete highlight:', e);
     }
@@ -1099,6 +1142,7 @@ export default function BookReaderPage() {
           highlightId={activeHighlightId}
           onClose={() => setSelectionPosition(null)}
           onHighlight={handleCreateHighlight}
+          onUpdateHighlightColor={handleUpdateHighlightColor}
           onDeleteHighlight={handleDeleteHighlight}
           onOpenNote={() => setShowNoteModal(true)}
           onLookupChunk={() => setShowLookupModal(true)}

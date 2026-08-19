@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './SelectionToolbar.css';
 
-export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink';
+export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple';
 
 export interface SelectionPosition {
   x: number;
@@ -16,6 +16,7 @@ interface SelectionToolbarProps {
   highlightId?: string | null;
   onClose: () => void;
   onHighlight: (color: HighlightColor) => void;
+  onUpdateHighlightColor?: (color: HighlightColor) => void;
   onDeleteHighlight?: (id: string) => void;
   onOpenNote: () => void;
   onLookupChunk: (text: string) => void;
@@ -28,6 +29,7 @@ export default function SelectionToolbar({
   highlightId,
   onClose,
   onHighlight,
+  onUpdateHighlightColor,
   onDeleteHighlight,
   onOpenNote,
   onLookupChunk,
@@ -107,19 +109,35 @@ export default function SelectionToolbar({
         </button>
 
         {/* 2. 划线 / 删除划线 */}
+        {/* 2. 划线 / 改色 / 删除 */}
         {highlightId ? (
-          <button
-            type="button"
-            className="toolbar-btn btn-danger-hover"
-            onClick={() => {
-              if (onDeleteHighlight) onDeleteHighlight(highlightId);
-              onClose();
-            }}
-            title="Delete this highlight"
-          >
-            <span className="toolbar-icon">🗑️</span>
-            <span className="toolbar-label">Delete</span>
-          </button>
+          <>
+            <button
+              type="button"
+              className={`toolbar-btn ${showColorPicker ? 'active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowColorPicker(!showColorPicker);
+                setShowLookupMenu(false);
+              }}
+              title="Change highlight color"
+            >
+              <span className="toolbar-icon">🎨</span>
+              <span className="toolbar-label">Color</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-btn btn-danger-hover"
+              onClick={() => {
+                if (onDeleteHighlight) onDeleteHighlight(highlightId);
+                onClose();
+              }}
+              title="Delete this highlight"
+            >
+              <span className="toolbar-icon">🗑️</span>
+              <span className="toolbar-label">Delete</span>
+            </button>
+          </>
         ) : (
           <button
             type="button"
@@ -166,14 +184,18 @@ export default function SelectionToolbar({
         </button>
       </div>
 
-      {/* 划线 4 色选择器（仅在新划线时可见） */}
-      {showColorPicker && !highlightId && (
+      {/* 划线 5 色选择器 */}
+      {showColorPicker && (
         <div className="color-picker-menu" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             className="color-dot color-yellow"
             onClick={() => {
-              onHighlight('yellow');
+              if (highlightId && onUpdateHighlightColor) {
+                onUpdateHighlightColor('yellow');
+              } else {
+                onHighlight('yellow');
+              }
               onClose();
             }}
             title="Yellow highlight"
@@ -182,7 +204,11 @@ export default function SelectionToolbar({
             type="button"
             className="color-dot color-green"
             onClick={() => {
-              onHighlight('green');
+              if (highlightId && onUpdateHighlightColor) {
+                onUpdateHighlightColor('green');
+              } else {
+                onHighlight('green');
+              }
               onClose();
             }}
             title="Green highlight"
@@ -191,7 +217,11 @@ export default function SelectionToolbar({
             type="button"
             className="color-dot color-blue"
             onClick={() => {
-              onHighlight('blue');
+              if (highlightId && onUpdateHighlightColor) {
+                onUpdateHighlightColor('blue');
+              } else {
+                onHighlight('blue');
+              }
               onClose();
             }}
             title="Blue highlight"
@@ -200,10 +230,27 @@ export default function SelectionToolbar({
             type="button"
             className="color-dot color-pink"
             onClick={() => {
-              onHighlight('pink');
+              if (highlightId && onUpdateHighlightColor) {
+                onUpdateHighlightColor('pink');
+              } else {
+                onHighlight('pink');
+              }
               onClose();
             }}
             title="Pink highlight"
+          />
+          <button
+            type="button"
+            className="color-dot color-purple"
+            onClick={() => {
+              if (highlightId && onUpdateHighlightColor) {
+                onUpdateHighlightColor('purple');
+              } else {
+                onHighlight('purple');
+              }
+              onClose();
+            }}
+            title="Purple highlight"
           />
         </div>
       )}
