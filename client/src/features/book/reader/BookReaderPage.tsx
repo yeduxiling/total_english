@@ -609,19 +609,24 @@ export default function BookReaderPage() {
           };
           contents.document.addEventListener('mousemove', handleMouseMove);
 
-          // 3. 注入 iframe 内部键盘左右翻页监听（严防重复绑定与事件冒泡导致的双倍跳页）
-          const handleIframeKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowLeft') {
-              e.preventDefault();
-              e.stopPropagation();
-              handlePrevPage();
-            } else if (e.key === 'ArrowRight') {
-              e.preventDefault();
-              e.stopPropagation();
-              handleNextPage();
-            }
-          };
-          contents.document.addEventListener('keydown', handleIframeKeyDown);
+          // 3. 注入 iframe 内部键盘左右翻页监听（严格去重 + 过滤系统连发按键 repeat）
+          if (contents.document && !(contents.document as any).__hasKeyHandler) {
+            (contents.document as any).__hasKeyHandler = true;
+
+            const handleIframeKeyDown = (e: KeyboardEvent) => {
+              if (e.repeat) return; // 拦截操作系统的长按连发
+              if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                e.stopPropagation();
+                handlePrevPage();
+              } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleNextPage();
+              }
+            };
+            contents.document.addEventListener('keydown', handleIframeKeyDown);
+          }
 
           // 鼠标按下时标记正在选择，并隐藏旧浮窗，防止遮挡正在划选的内容
           const handleMouseDown = () => {
@@ -737,13 +742,13 @@ export default function BookReaderPage() {
     };
   }, [bookId, bookData?.id]);
 
-  // 翻页控制 (增加 280ms 严格防抖节流锁，防止连击、双击或键盘连按导致的跳屏丢页)
+  // 翻页控制 (增加 380ms 严格防抖节流锁，防止连击、双击或键盘连按导致的跳屏丢页)
   const handlePrevPage = useCallback(() => {
     if (isTurningPageRef.current) return;
     isTurningPageRef.current = true;
     setTimeout(() => {
       isTurningPageRef.current = false;
-    }, 280);
+    }, 380);
 
     setSelectionPosition(null);
     setActiveHighlightId(null);
@@ -755,7 +760,7 @@ export default function BookReaderPage() {
     isTurningPageRef.current = true;
     setTimeout(() => {
       isTurningPageRef.current = false;
-    }, 280);
+    }, 380);
 
     setSelectionPosition(null);
     setActiveHighlightId(null);
@@ -767,6 +772,7 @@ export default function BookReaderPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 弹窗开启时不触发键盘翻页
       if (showNoteModal || showLookupModal || showAnalysisModal || activePanel) return;
+      if (e.repeat) return; // 严格过滤操作系统长按连发
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         handlePrevPage();
